@@ -1,3 +1,24 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+html {
+    font-size: 62.5%;
+    text-rendering: optimizeLegibility;
+}
+
+body {
+    line-height: 1;
+}
+
+.text-light {
+    color: rgba(56, 55, 54, 0.552);
+} 
+
+.text-dark {
+    color: #413F3D;
+}
+
+.link-style {
+    @apply text-black hover:underline;
+}
