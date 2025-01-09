@@ -1,6 +1,8 @@
 import { Playfair_Display } from "next/font/google";
+import "~/styles/globals.css";
 import { type Metadata } from "next";
-import "../styles/globals.css";
+
+import { TRPCReactProvider } from "~/trpc/react";
 
 const font = Playfair_Display({
   subsets: ["latin"],
@@ -20,12 +22,12 @@ export const metadata: Metadata = {
 
 export default function RootLayout({
   children,
-}: {
-  children: React.ReactNode;
-}) {
+}: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en">
-      <body className={font.className}>{children}</body>
+      <body className={font.className}>
+        <TRPCReactProvider>{children}</TRPCReactProvider>
+      </body>
     </html>
   );
 }
