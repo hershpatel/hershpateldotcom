@@ -3,8 +3,13 @@
  * for Docker builds.
  */
 import "./src/env.js";
+import { env } from "./src/env.js";
 
 /** @type {import("next").NextConfig} */
-const config = {};
+const config = {
+  images: {
+    domains: [new URL(env.CLOUDFRONT_URL).hostname],
+  },
+};
 
 export default config;

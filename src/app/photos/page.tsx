@@ -4,64 +4,34 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { useState, useCallback, useEffect } from 'react'
 import { Dialog, DialogPanel } from '@headlessui/react'
+import { api } from "~/trpc/react"
 
-// Temporary type and data for development
+// Photo type
 type Photo = {
-  id: number;
+  id: string;
   src: string;
   name: string;
-  date: string;
-  location: string;
-  camera_name: string;
 }
-
-const photos: Photo[] = [
-  {
-    id: 1,
-    src: '/photos/1.png',
-    name: 'Photo 1',
-    date: '2024-03-20',
-    location: 'San Francisco, CA',
-    camera_name: 'Sony A7III'
-  },
-  {
-    id: 2,
-    src: '/photos/2.png',
-    name: 'Photo 2',
-    date: '2024-03-21',
-    location: 'San Francisco, CA',
-    camera_name: 'Sony A7III'
-  },
-  {
-    id: 3,
-    src: '/photos/3.png',
-    name: 'Photo 3',
-    date: '2024-03-23',
-    location: 'London, UK',
-    camera_name: 'Sony A7III'
-  },
-  {
-    id: 4,
-    src: '/photos/4.png',
-    name: 'Photo 4',
-    date: '2024-03-24s',
-    location: 'New York, NY',
-    camera_name: 'Sony A7III'
-  },
-  {
-    id: 5,
-    src: '/photos/5.png',
-    name: 'Photo 5',
-    date: '2024-03-25',
-    location: 'Newark, NJ',
-    camera_name: 'Sony A7III'
-  }
-];
 
 export default function Photos() {
   const [selectedPhotoIndex, setSelectedPhotoIndex] = useState<number | null>(null);
   const [touchStart, setTouchStart] = useState<number | null>(null);
   const [touchEnd, setTouchEnd] = useState<number | null>(null);
+  const [loadedImages, setLoadedImages] = useState<Set<string>>(new Set());
+
+  // Fetch S3 photos
+  const { data: s3Urls = [], isLoading: isLoadingPhotos } = api.s3.listPhotos.useQuery({});
+  
+  // Convert S3 URLs to Photo objects
+  const photos: Photo[] = s3Urls.map((url, index) => ({
+    id: `s3-${index}`,
+    src: url,
+    name: url.split('/').pop() ?? 'Untitled',
+  }));
+
+  const handleImageLoad = (photoId: string) => {
+    setLoadedImages(prev => new Set([...prev, photoId]));
+  };
 
   const handleTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
     const touch = e.targetTouches[0];
@@ -121,23 +91,38 @@ export default function Photos() {
     <main className="min-h-screen bg-white p-8">
       <div className="max-w-[75%] mx-auto">
         <Link href="/" className="text-[1.6rem] link-style mb-8 inline-block">&larr; back</Link>
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8 mt-8">
-          {photos.map((photo, index) => (
-            <div 
-              key={photo.id} 
-              className="aspect-square relative cursor-pointer"
-              onClick={() => setSelectedPhotoIndex(index)}
-            >
-              <Image
-                src={photo.src}
-                alt={photo.name}
-                fill
-                className="object-cover"
-                sizes="(max-width: 640px) 75vw, (max-width: 768px) 37.5vw, (max-width: 1024px) 25vw, 18.75vw"
-              />
-            </div>
-          ))}
-        </div>
+        
+        {isLoadingPhotos ? (
+          <div className="flex justify-center items-center min-h-[200px]">
+            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-gray-900"></div>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8 mt-8">
+            {photos.map((photo, index) => (
+              <div 
+                key={photo.id} 
+                className="aspect-square relative cursor-pointer"
+                onClick={() => setSelectedPhotoIndex(index)}
+              >
+                {!loadedImages.has(photo.id) && (
+                  <div className="absolute inset-0 flex items-center justify-center bg-gray-100">
+                    <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-gray-600"></div>
+                  </div>
+                )}
+                <Image
+                  src={photo.src}
+                  alt={photo.name}
+                  fill
+                  className={`object-cover transition-opacity duration-300 ${
+                    loadedImages.has(photo.id) ? 'opacity-100' : 'opacity-0'
+                  }`}
+                  sizes="(max-width: 640px) 75vw, (max-width: 768px) 37.5vw, (max-width: 1024px) 25vw, 18.75vw"
+                  onLoad={() => handleImageLoad(photo.id)}
+                />
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       <Dialog 

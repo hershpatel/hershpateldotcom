@@ -8,6 +8,9 @@ export const env = createEnv({
    */
   server: {
     DATABASE_URL: z.string().url(),
+    CLOUDFRONT_URL: z.string().url(),
+    HERSHEY_PHOTOS_IAM_USER: z.string(),
+    HERSHEY_PHOTOS_S3_BUCKET: z.string(),
     NODE_ENV: z
       .enum(["development", "test", "production"])
       .default("development"),
@@ -28,7 +31,10 @@ export const env = createEnv({
    */
   runtimeEnv: {
     DATABASE_URL: process.env.DATABASE_URL,
+    CLOUDFRONT_URL: process.env.CLOUDFRONT_URL,
     NODE_ENV: process.env.NODE_ENV,
+    HERSHEY_PHOTOS_IAM_USER: process.env.HERSHEY_PHOTOS_IAM_USER,
+    HERSHEY_PHOTOS_S3_BUCKET: process.env.HERSHEY_PHOTOS_S3_BUCKET,
     // NEXT_PUBLIC_CLIENTVAR: process.env.NEXT_PUBLIC_CLIENTVAR,
   },
   /**
