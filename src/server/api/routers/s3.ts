@@ -35,16 +35,17 @@ export const s3Router = createTRPCRouter({
     .input(z.object({
       prefix: z.string().optional(),
     }))
+    .output(z.array(z.string()))
     .query(async ({ input }) => {
       
       try {
-        const command = new ListObjectsV2Command({
+        const request = new ListObjectsV2Command({
           Bucket: bucketName,
           Prefix: input.prefix,
           MaxKeys: 1000,
         });
         
-        const response = await s3Client.send(command);
+        const response = await s3Client.send(request);
         
         // Extract keys and prepend CloudFront URL
         const files = response.Contents?.map(obj => {
