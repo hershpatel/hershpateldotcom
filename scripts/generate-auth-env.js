@@ -18,8 +18,14 @@ if (!password) {
 
 // Generate password hash
 bcrypt.hash(password, 10).then((hash) => {
-  // Double escape $ characters for .env file
+  // For local .env file (escaped)
   const escapedHash = hash.replace(/\$/g, '\\$');
+  console.log("\nFor local .env file:");
   console.log(`SHH_PASSWORD_HASH='${escapedHash}'`);
+  console.log(`SHH_SESSION_SECRET="${sessionSecret}"`);
+  
+  // For Vercel environment variables (unescaped)
+  console.log("\nFor Vercel environment variables:");
+  console.log(`SHH_PASSWORD_HASH="${hash}"`);
   console.log(`SHH_SESSION_SECRET="${sessionSecret}"`);
 });
