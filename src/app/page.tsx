@@ -15,7 +15,7 @@ export default function HomePage() {
             priority
           />
           <h1 className="text-[3rem] font-light leading-[4.8rem] mt-4 mb-0 text-dark">Hersh</h1>
-          <h2 className="text-[1.6rem] leading-[3rem] text-secondary text-center max-w-[54rem] px-5">patel [dot] hersh [at] rutgers [dot] edu</h2>
+          <h2 className="text-[1.6rem] leading-[3rem] text-secondary text-center max-w-[54rem] px-5">patel <span className="text-light">[dot]</span> hersh <span className="text-light">[at]</span> rutgers <span className="text-light">[dot]</span> edu</h2>
 
           <div className="w-full max-w-[54rem] mt-16">
             <h4 className="text-[1.6rem] font-medium text-dark mb-8 px-5 text-center">about</h4>
@@ -40,7 +40,7 @@ export default function HomePage() {
 
             <div className="my-16"></div>
             
-            <h2 className="text-[1.5rem] text-light text-center">&copy; Hersh Patel 2025</h2>
+            <h2 className="text-[1.5rem] text-light text-center">&copy; hersh patel {new Date().getFullYear()}</h2>
           </div>
         </div>
       </div>

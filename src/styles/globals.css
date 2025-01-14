@@ -7,6 +7,17 @@ html {
     text-rendering: optimizeLegibility;
 }
 
+/* Change highlight color for the entire website */
+::selection {
+    background-color: #48645363;
+    color: inherit;
+}
+
+::-moz-selection {
+    background-color: #48645363;
+    color: inherit;
+}
+
 body {
     line-height: 1;
 }
