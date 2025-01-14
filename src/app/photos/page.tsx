@@ -96,6 +96,10 @@ export default function Photos() {
           <div className="flex justify-center items-center min-h-[200px]">
             <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-gray-900"></div>
           </div>
+        ) : photos.length === 0 ? (
+          <div className="flex items-center min-h-[200px] text-light text-[1.6rem]">
+            no photos found
+          </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8 mt-8">
             {photos.map((photo, index) => (
