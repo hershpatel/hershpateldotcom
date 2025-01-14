@@ -73,13 +73,13 @@ function LoginForm() {
       if (!response.ok) {
         switch (response.status) {
           case 429:
-            setError("too many attempts. please try again later.");
+            setError("chill out");
             break;
           case 401:
-            setError("invalid password");
+            setError("no");
             break;
           default:
-            setError(data.error ?? "an error occurred");
+            setError(data.error ?? "error");
         }
         return;
       }
@@ -101,7 +101,7 @@ function LoginForm() {
           <div className="space-y-4">
             {isLoading ? (
               <div className="text-[1.6rem] text-center">
-                <span className="animate-pulse">⌛</span>
+                <span className="animate-pulse text-light">⌛</span>
               </div>
             ) : (
               <TerminalInput
@@ -117,7 +117,7 @@ function LoginForm() {
               />
             )}
             {error && (
-              <p className="text-red-500 text-[1.4rem] text-center mt-4" role="alert">{error}</p>
+              <p className="text-light text-[1.4rem] text-center mt-4" role="alert">{error}</p>
             )}
           </div>
           <button type="submit" className="hidden">Submit</button>
