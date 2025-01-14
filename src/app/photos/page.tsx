@@ -69,7 +69,7 @@ export default function Photos() {
 
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
     if (selectedPhotoIndex === null) return;
-
+    
     if (e.key === 'ArrowRight' && selectedPhotoIndex < photos.length - 1) {
       setSelectedPhotoIndex(selectedPhotoIndex + 1);
     }
@@ -79,7 +79,7 @@ export default function Photos() {
     if (e.key === 'Escape') {
       setSelectedPhotoIndex(null);
     }
-  }, [selectedPhotoIndex]);
+  }, [selectedPhotoIndex, photos.length]);
 
   // Add keyboard event listeners
   useEffect(() => {

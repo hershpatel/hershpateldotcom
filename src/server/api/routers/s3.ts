@@ -15,7 +15,7 @@ const getBucketFromArn = (arn: string): string => {
 const bucketName = getBucketFromArn(env.HERSHEY_PHOTOS_S3_BUCKET);
 
 function getS3Client() {
-    const [_arn, accessKey, secretKey] = env.HERSHEY_PHOTOS_IAM_USER.split("|");
+    const [, accessKey, secretKey] = env.HERSHEY_PHOTOS_IAM_USER.split("|");
     if (!accessKey || !secretKey) {
       throw new Error("Invalid IAM credentials format");
     }

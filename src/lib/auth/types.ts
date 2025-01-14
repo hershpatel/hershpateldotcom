@@ -2,9 +2,9 @@ import { z } from "zod";
 
 // Environment variable schema
 export const authEnvSchema = z.object({
-  ADMIN_PASSWORD_HASH: z.string().min(1),
-  SESSION_SECRET: z.string().min(32),
-  SESSION_DURATION: z.coerce.number().int().positive(),
+  SHH_PASSWORD_HASH: z.string().min(1),
+  SHH_SESSION_SECRET: z.string().min(32),
+  SHH_SESSION_DURATION: z.coerce.number().int().positive(),
 });
 
 export type AuthEnv = z.infer<typeof authEnvSchema>;
@@ -33,4 +33,3 @@ export interface AuthResponse {
 
 // Constants
 export const AUTH_COOKIE_NAME = "shh_session";
-export const COOKIE_MAX_AGE = 24 * 60 * 60; // 24 hours in seconds

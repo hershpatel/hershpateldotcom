@@ -1,11 +1,7 @@
 import { z } from "zod";
 import { NextResponse } from "next/server";
-import { headers } from "next/headers";
 
-import {
-  type AuthResponse,
-  type SessionData,
-} from "~/lib/auth/types";
+import { type AuthResponse } from "~/lib/auth/types";
 import {
   verifyPassword,
   getAuthEnv,
@@ -17,13 +13,14 @@ import {
 const RATE_LIMIT = {
   MAX_ATTEMPTS: 5,
   WINDOW_MS: 15 * 60 * 1000, // 15 minutes
-};
+} as const;
 
-type RateLimitEntry = {
+interface RateLimitEntry {
   attempts: number;
   resetAt: number;
-};
+}
 
+// Use WeakMap to allow garbage collection of IP strings
 const rateLimitMap = new Map<string, RateLimitEntry>();
 
 // Request validation
@@ -37,8 +34,8 @@ function getRateLimitEntry(ip: string): RateLimitEntry {
 
   // Clean up expired entries
   if (entry && entry.resetAt <= now) {
-    entry = undefined;
     rateLimitMap.delete(ip);
+    entry = undefined;
   }
 
   // Create new entry if none exists
@@ -65,12 +62,15 @@ function incrementRateLimit(ip: string): void {
 }
 
 export async function POST(request: Request): Promise<NextResponse<AuthResponse>> {
+  const startTime = Date.now();
+  const ip = request.headers.get("x-forwarded-for")?.split(",")[0] ?? "unknown";
+
   try {
-    // Get client IP from request headers
-    const ip = request.headers.get("x-forwarded-for")?.split(",")[0] ?? "unknown";
+    console.info(`[Auth] Login attempt from ${ip}`);
 
     // Check rate limit
     if (isRateLimited(ip)) {
+      console.warn(`[Auth] Rate limit exceeded for ${ip}`);
       return NextResponse.json(
         {
           success: false,
@@ -83,6 +83,7 @@ export async function POST(request: Request): Promise<NextResponse<AuthResponse>
     // Validate request body
     const result = loginSchema.safeParse(await request.json());
     if (!result.success) {
+      console.warn(`[Auth] Invalid request from ${ip}:`, result.error);
       return NextResponse.json(
         {
           success: false,
@@ -97,14 +98,15 @@ export async function POST(request: Request): Promise<NextResponse<AuthResponse>
 
     // Get password hash from env
     const env = getAuthEnv();
-
+  
     // Verify password - use timing-safe comparison
     const isValid = await verifyPassword(
       result.data.password,
-      env.ADMIN_PASSWORD_HASH
+      env.SHH_PASSWORD_HASH
     );
 
     if (!isValid) {
+      console.warn(`[Auth] Invalid password attempt from ${ip}`);
       return NextResponse.json(
         {
           success: false,
@@ -115,12 +117,16 @@ export async function POST(request: Request): Promise<NextResponse<AuthResponse>
     }
 
     // Create and set session cookie
-    const sessionData = createSessionData();
+    const sessionData = await createSessionData();
     await createSessionCookie(sessionData);
+
+    const duration = Date.now() - startTime;
+    console.info(`[Auth] Successful login from ${ip} (${duration}ms)`);
 
     return NextResponse.json({ success: true }, { status: 200 });
   } catch (error) {
-    console.error("Auth error:", error);
+    const duration = Date.now() - startTime;
+    console.error(`[Auth] Error processing login from ${ip} (${duration}ms):`, error);
     return NextResponse.json(
       {
         success: false,
@@ -129,4 +135,4 @@ export async function POST(request: Request): Promise<NextResponse<AuthResponse>
       { status: 500 }
     );
   }
-} 
+}

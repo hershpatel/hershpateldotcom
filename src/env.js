@@ -14,6 +14,14 @@ export const env = createEnv({
     NODE_ENV: z
       .enum(["development", "test", "production"])
       .default("development"),
+    SHH_PASSWORD_HASH: z.string()
+      .min(1)
+      .refine(
+        (hash) => hash.startsWith('$2a$') || hash.startsWith('$2b$'),
+        'Password hash must be a valid bcrypt hash starting with $2a$ or $2b$'
+      ),
+    SHH_SESSION_SECRET: z.string().min(32),
+    SHH_SESSION_DURATION: z.coerce.number().int().positive().default(86400),
   },
 
   /**
@@ -35,7 +43,9 @@ export const env = createEnv({
     NODE_ENV: process.env.NODE_ENV,
     HERSHEY_PHOTOS_IAM_USER: process.env.HERSHEY_PHOTOS_IAM_USER,
     HERSHEY_PHOTOS_S3_BUCKET: process.env.HERSHEY_PHOTOS_S3_BUCKET,
-    // NEXT_PUBLIC_CLIENTVAR: process.env.NEXT_PUBLIC_CLIENTVAR,
+    SHH_PASSWORD_HASH: process.env.SHH_PASSWORD_HASH,
+    SHH_SESSION_SECRET: process.env.SHH_SESSION_SECRET,
+    SHH_SESSION_DURATION: process.env.SHH_SESSION_DURATION,
   },
   /**
    * Run `build` or `dev` with `SKIP_ENV_VALIDATION` to skip env validation. This is especially
