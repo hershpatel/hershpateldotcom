@@ -24,10 +24,10 @@ export default function AdminPage() {
 
   return (
     <main className="min-h-screen bg-white p-8">
-      <div className="w-[95%] md:max-w-[85%] lg:max-w-[75%] mx-auto">
+      <div className="w-[98%] md:max-w-[80%] lg:max-w-[50%] mx-auto">
         <button
           onClick={handleLogout}
-          className="text-[1.6rem] link-style mb-8"
+          className="text-[1.4rem] link-style mb-8"
         >
           logout
         </button>

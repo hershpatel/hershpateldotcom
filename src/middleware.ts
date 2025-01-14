@@ -25,6 +25,7 @@ const securityHeaders = {
     base-uri 'self';
     form-action 'self';
     frame-ancestors 'none';
+    connect-src 'self' https://*.s3.us-east-1.amazonaws.com;
     block-all-mixed-content;
     upgrade-insecure-requests;
   `.replace(/\s+/g, " ").trim(),

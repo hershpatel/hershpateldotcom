@@ -1,4 +1,5 @@
-import { S3Client, ListObjectsV2Command } from "@aws-sdk/client-s3";
+import { S3Client, ListObjectsV2Command, PutObjectCommand } from "@aws-sdk/client-s3";
+import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { z } from "zod";
 import { env } from "~/env";
 import { createTRPCRouter, publicProcedure } from "~/server/api/trpc";
@@ -61,6 +62,38 @@ export const s3Router = createTRPCRouter({
       } catch (error) {
         console.error('Error listing photos:', error);
         throw new Error('Failed to list photos from S3');
+      }
+    }),
+
+  getUploadUrls: publicProcedure
+    .input(z.array(z.object({
+      filename: z.string(),
+      contentType: z.string()
+    })))
+    .output(z.array(z.object({
+      url: z.string(),
+      key: z.string()
+    })))
+    .mutation(async ({ input }) => {
+      try {
+        const urls = await Promise.all(
+          input.map(async (file) => {
+            const key = file.filename;
+            const command = new PutObjectCommand({
+              Bucket: bucketName,
+              Key: key,
+              ContentType: file.contentType
+            });
+
+            const url = await getSignedUrl(s3Client, command, { expiresIn: 3600 });
+            return { url, key };
+          })
+        );
+
+        return urls;
+      } catch (error) {
+        console.error('Error generating upload URLs:', error);
+        throw new Error('Failed to generate upload URLs');
       }
     }),
 });
