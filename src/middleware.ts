@@ -3,8 +3,6 @@ import { getSessionData } from "~/lib/auth/utils";
 
 // Paths that require authentication
 const PROTECTED_PATHS = ["/shh"];
-// Paths that should be accessible without auth
-const PUBLIC_PATHS = ["/shh/login"];
 
 // Security headers
 const securityHeaders = {
@@ -41,8 +39,7 @@ const securityHeaders = {
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // Create base response
-  let response = NextResponse.next();
+  const response = NextResponse.next();
 
   // Helper function to add security headers
   const addSecurityHeaders = (res: NextResponse) => {
