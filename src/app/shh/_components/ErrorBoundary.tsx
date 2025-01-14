@@ -23,7 +23,7 @@ export class ErrorBoundary extends Component<Props, State> {
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
     // Log error to your preferred logging service
-    console.error("Admin UI Error:", error, errorInfo);
+    console.error("Shh UI Error:", error, errorInfo);
   }
 
   render() {
@@ -34,7 +34,7 @@ export class ErrorBoundary extends Component<Props, State> {
             <div className="text-center space-y-4">
               <h2 className="text-[2rem] font-medium text-gray-900">Something went wrong</h2>
               <p className="text-[1.6rem] text-gray-600">
-                {this.state.error?.message ?? "An unexpected error occurred"}
+                {this.state.error?.message ?? "an unexpected error occurred"}
               </p>
               <button
                 onClick={() => this.setState({ hasError: false })}
