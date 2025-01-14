@@ -41,48 +41,47 @@ const securityHeaders = {
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // Start with a new response
+  // Create base response
   let response = NextResponse.next();
 
-  // Check if this is a protected path
-  const isProtectedPath = PROTECTED_PATHS.some((path) => 
-    pathname.startsWith(path)
-  );
+  // Helper function to add security headers
+  const addSecurityHeaders = (res: NextResponse) => {
+    Object.entries(securityHeaders).forEach(([key, value]) => {
+      res.headers.set(key, value);
+    });
+    return res;
+  };
 
-  // Allow public paths
-  const isPublicPath = PUBLIC_PATHS.some((path) => 
-    pathname === path
-  );
+  // Helper function to create redirect response
+  const createRedirect = (url: URL) => {
+    return addSecurityHeaders(NextResponse.redirect(url));
+  };
 
-  // Add security headers to all /shh routes
-  Object.entries(securityHeaders).forEach(([key, value]) => {
-    response.headers.set(key, value);
-  });
-
-  // If not a protected path or is explicitly public, return with headers
-  if (!isProtectedPath || isPublicPath) {
-    return response;
-  }
-
-  // Validate session
+  // Get session status
   const session = await getSessionData(request);
 
-  if (!session) {
-    // Redirect to login with return URL
-    const url = new URL("/shh/login", request.url);
-    url.searchParams.set("from", pathname);
-    response = NextResponse.redirect(url);
-    
-    // Add security headers to redirect
-    Object.entries(securityHeaders).forEach(([key, value]) => {
-      response.headers.set(key, value);
-    });
-    
-    return response;
+  // Handle login page access
+  if (pathname === "/shh/login") {
+    if (session) {
+      // Redirect authenticated users away from login
+      const returnTo = request.nextUrl.searchParams.get("from") ?? "/shh";
+      return createRedirect(new URL(returnTo, request.url));
+    }
+    return addSecurityHeaders(response);
   }
 
-  // Session is valid, return with headers
-  return response;
+  // Handle protected paths
+  if (PROTECTED_PATHS.some(path => pathname.startsWith(path))) {
+    if (!session) {
+      // Redirect unauthenticated users to login
+      const url = new URL("/shh/login", request.url);
+      url.searchParams.set("from", pathname);
+      return createRedirect(url);
+    }
+  }
+
+  // Add security headers to all /shh routes and return
+  return addSecurityHeaders(response);
 }
 
 // Configure middleware to run only on /shh paths

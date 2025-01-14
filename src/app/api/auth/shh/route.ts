@@ -11,7 +11,7 @@ import {
 
 // Rate limiting
 const RATE_LIMIT = {
-  MAX_ATTEMPTS: 5,
+  MAX_ATTEMPTS: 10,
   WINDOW_MS: 15 * 60 * 1000, // 15 minutes
 } as const;
 
