@@ -2,10 +2,12 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { SectionButton } from "./_components/SectionButton";
+import { type SectionId, sections } from "./_components/sections";
 
 export default function AdminPage() {
   const router = useRouter();
-  const [activeSection, setActiveSection] = useState<'upload' | 'delete' | null>(null);
+  const [activeSection, setActiveSection] = useState<SectionId>("upload");
 
   const handleLogout = async () => {
     try {
@@ -16,9 +18,13 @@ export default function AdminPage() {
     }
   };
 
+  const ActiveComponent = activeSection 
+    ? sections.find(s => s.id === activeSection)?.Component 
+    : null;
+
   return (
     <main className="min-h-screen bg-white p-8">
-      <div className="max-w-[75%] mx-auto">
+      <div className="w-[95%] md:max-w-[85%] lg:max-w-[75%] mx-auto">
         <button
           onClick={handleLogout}
           className="text-[1.6rem] link-style mb-8"
@@ -26,38 +32,23 @@ export default function AdminPage() {
           logout
         </button>
 
-        <div className="flex gap-16 mt-12">
+        <div className="flex gap-16 mt-12 min-h-[50vh]">
           {/* Left navigation */}
           <div className="flex flex-col space-y-8">
-            <button
-              onClick={() => setActiveSection('upload')}
-              className={`text-[1.6rem] link-style text-left ${activeSection === 'upload' ? 'underline' : ''}`}
-            >
-              upload images
-            </button>
-            <button
-              onClick={() => setActiveSection('delete')}
-              className={`text-[1.6rem] link-style text-left ${activeSection === 'delete' ? 'underline' : ''}`}
-            >
-              delete images
-            </button>
+            {sections.map((section) => (
+              <SectionButton
+                key={section.id}
+                id={section.id}
+                label={section.label}
+                isActive={activeSection === section.id}
+                onClick={setActiveSection}
+              />
+            ))}
           </div>
 
           {/* Right content */}
           <div className="flex-1">
-            {activeSection === 'upload' && (
-              <p className="text-lg">Butterfly dance through summer breeze</p>
-            )}
-
-            {activeSection === 'delete' && (
-              <p className="text-lg">Mountain peaks touch cloudy sky high</p>
-            )}
-
-            {!activeSection && (
-              <p className="text-gray-500 text-lg">
-                Select a section from the left to get started
-              </p>
-            )}
+            {ActiveComponent && <ActiveComponent />}
           </div>
         </div>
       </div>
