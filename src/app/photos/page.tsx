@@ -20,13 +20,13 @@ export default function Photos() {
   const [loadedImages, setLoadedImages] = useState<Set<string>>(new Set());
 
   // Fetch S3 photos
-  const { data: s3Urls = [], isLoading: isLoadingPhotos } = api.s3.listPhotos.useQuery({});
+  const { data: s3Photos = [], isLoading: isLoadingPhotos } = api.photos.listPhotos.useQuery({prefix: "to-optimize/"});
   
   // Convert S3 URLs to Photo objects
-  const photos: Photo[] = s3Urls.map((url, index) => ({
+  const photos: Photo[] = s3Photos.map((photo, index) => ({
     id: `s3-${index}`,
-    src: url,
-    name: url.split('/').pop() ?? 'Untitled',
+    src: photo.url,
+    name: photo.key.split('/').pop() ?? photo.key,
   }));
 
   const handleImageLoad = (photoId: string) => {

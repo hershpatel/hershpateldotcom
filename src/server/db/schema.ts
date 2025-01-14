@@ -1,13 +1,13 @@
 // Example model schema from the Drizzle docs
 // https://orm.drizzle.team/docs/sql-schema-declaration
 
-import { sql } from "drizzle-orm";
 import {
   index,
-  integer,
   pgTableCreator,
   timestamp,
   varchar,
+  uuid,
+  pgEnum,
 } from "drizzle-orm/pg-core";
 
 /**
@@ -18,19 +18,30 @@ import {
  */
 export const createTable = pgTableCreator((name) => `hershpateldotcom_${name}`);
 
-export const posts = createTable(
-  "post",
+export const imageStatusEnum = pgEnum('image_status', ['pending', 'ready', 'disabled']);
+
+// Add the TypeScript enum
+export enum ImageStatus {
+  PENDING = 'pending',
+  READY = 'ready',
+  DISABLED = 'disabled'
+}
+
+export const images = createTable(
+  "images",
   {
-    id: integer("id").primaryKey().generatedByDefaultAsIdentity(),
-    name: varchar("name", { length: 256 }),
-    createdAt: timestamp("created_at", { withTimezone: true })
-      .default(sql`CURRENT_TIMESTAMP`)
-      .notNull(),
-    updatedAt: timestamp("updated_at", { withTimezone: true }).$onUpdate(
-      () => new Date()
-    ),
+    pk: uuid("pk").primaryKey().defaultRandom(),
+    status: imageStatusEnum("status").notNull().default(ImageStatus.PENDING),
+    full_key: varchar("full_key", { length: 256 }).notNull(),
+    thumbnail_key: varchar("thumbnail_key", { length: 256 }).notNull(),
+    gallery_key: varchar("gallery_key", { length: 256 }).notNull(),
+    camera: varchar("camera", { length: 256 }),
+    original_created_at: timestamp("original_created_at", { withTimezone: true }).notNull(),
   },
-  (example) => ({
-    nameIndex: index("name_idx").on(example.name),
+  (table) => ({
+    createdAtIdx: index("created_at_idx").on(table.original_created_at),
   })
 );
+
+// Update the type helper to use the enum
+export type Image = typeof images.$inferSelect;

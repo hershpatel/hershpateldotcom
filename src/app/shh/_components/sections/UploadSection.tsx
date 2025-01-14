@@ -40,7 +40,7 @@ export function UploadSection() {
     maxFiles: 50,
   });
 
-  const getUploadUrls = api.s3.getUploadUrls.useMutation();
+  const getUploadUrls = api.photos.getUploadUrls.useMutation();
 
   const uploadBatch = async (batch: UploadProgress[]) => {
     try {
@@ -48,7 +48,8 @@ export function UploadSection() {
       const urlsResponse = await getUploadUrls.mutateAsync(
         batch.map(item => ({
           filename: item.file.name,
-          contentType: item.file.type
+          contentType: item.file.type,
+          prefix: 'to-optimize'
         }))
       );
 

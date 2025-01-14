@@ -1,0 +1,31 @@
+You are a senior software engineer at a photography company. You are tasked with optimizing images for a client to serve on their website photo gallery.
+
+Images are uploaded to S3 via the UploadSection component with the s3 key prefix "full".
+
+For the database, we are using a postgres Supabase database. There needs to be a table called "images" with the following columns:
+- pk: uuid, primary key
+- full_key: string, the s3 key for the full-size image
+- thumbnail_key: string, the s3 key for the thumbnail image
+- gallery_key: string, the s3 key for the gallery image
+- camera: string, the camera used to take the photo (optional)
+- original_created_at: timestamp, the timestamp when the full image was uploaded
+This table should be managed via drizzle ORM.
+The table needs to be able to be queried by the `created_at` column in ascending and descending order. By default, the query should be in newest to oldest order.
+
+After an image is uploaded, it is submitted for optimization. This will be enabled manually by the user on the OptimizeSection component.
+- The user will click the "optimize all" button.
+- This will trigger a trpc call for each image in the "to-optimize" folder.
+- The trpc call will optimize the image by creating two new images:
+  - A low-quality image with the s3 key prefix "thumbnail/{image-name}.{image-extension}" which will be the thumbnail
+  - A high-quality image with the s3 key prefix "gallery/{image-name}.{image-extension}" which will be the full-size image for viewing in the gallery
+- The trpc call will then upload the two new images to S3 bucket
+- The trpc call will then store all 3 s3 keys in the database (via a drizzle query)
+    - it's important to note that the `camera` value should be populated from the metadata of the original/full image
+    - it's also important to note that the `created_at` value should be populated from the metadata of the original/full image
+- The trpc call will then return the 3 size of each image to the client and the UI will show the optimization status as complete with the image type and sizes
+
+On the photos page, the user will be able to view the the thumbnail, and the gallery image.
+- The UI for the photo gallery is already implemented, but the images are not being fetched from the database yet
+- Update the Photos component to fetch the images from the database and display them
+- The thumbnail will be the low-quality image with the s3 key prefix "thumbnail/{image-name}.{image-extension}"
+- The gallery image will be the high-quality image with the s3 key prefix "gallery/{image-name}.{image-extension}"
