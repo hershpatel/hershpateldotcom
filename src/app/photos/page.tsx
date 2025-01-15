@@ -111,10 +111,10 @@ export default function Photos() {
           <button 
             onClick={handleShuffle}
             className={`
-              px-4 py-2 rounded-lg text-[1.6rem] w-fit transition-all
+              text-[2rem] transition-all w-fit
               ${isRandom 
-                ? 'bg-gray-200 shadow-inner border border-gray-300' 
-                : 'border border-gray-300 hover:bg-gray-50'
+                ? 'translate-y-[1px] opacity-60 shadow-inner' 
+                : 'hover:opacity-80 drop-shadow-md'
               }
             `}
           >
