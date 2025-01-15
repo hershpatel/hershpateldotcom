@@ -12,10 +12,10 @@ import Promise from "bluebird";
 // Image processing configuration
 const IMAGE_CONFIG = {
   THUMBNAIL: {
-    width: 300,
-    height: 300,
+    width: 400,
+    height: 400,
     webp: {
-      quality: 100,
+      quality: 80,
       effort: 4
     }
   },

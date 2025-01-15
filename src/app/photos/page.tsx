@@ -117,7 +117,7 @@ export default function Photos() {
                   src={photo.gallerySrc}
                   alt={photo.name}
                   fill
-                  className={`object-cover transition-opacity duration-300 ${
+                  className={`object-cover transition-opacity ${
                     loadedImages.has(photo.id) ? 'opacity-100' : 'opacity-0'
                   }`}
                   sizes="(max-width: 640px) 75vw, (max-width: 768px) 37.5vw, (max-width: 1024px) 25vw, 18.75vw"
@@ -174,13 +174,14 @@ export default function Photos() {
                     →
                   </button>
                 </div>
-
                 <div className="w-[75vw] h-[85vh] relative">
                   <Image
                     src={photos[selectedPhotoIndex].gallerySrc}
                     alt={photos[selectedPhotoIndex].name}
                     fill
-                    className="object-contain"
+                    className={`object-contain ${
+                      loadedImages.has(photos[selectedPhotoIndex].id) ? 'opacity-100' : 'opacity-0'
+                    }`}
                     sizes="(max-width: 1536px) 100vw, 1536px"
                     priority
                   />
