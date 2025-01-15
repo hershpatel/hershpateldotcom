@@ -11,7 +11,7 @@ import Bluebird from "bluebird";
 import exifr from 'exifr';
 
 // Image processing configuration
-const IMAGE_CONFIG = {
+const IMAGE_OPTIMIZATION_CONFIG = {
   THUMBNAIL: {
     width: 400,
     height: 400,
@@ -293,16 +293,16 @@ export const photosRouter = createTRPCRouter({
 
         // Generate thumbnail (low quality)
         const thumbnailWebp = await sharp(imageBuffer)
-          .resize(IMAGE_CONFIG.THUMBNAIL.width, IMAGE_CONFIG.THUMBNAIL.height, { fit: 'inside', position: 'center' })
-          .webp(IMAGE_CONFIG.THUMBNAIL.webp)
+          .resize(IMAGE_OPTIMIZATION_CONFIG.THUMBNAIL.width, IMAGE_OPTIMIZATION_CONFIG.THUMBNAIL.height, { fit: 'inside', position: 'center' })
+          .webp(IMAGE_OPTIMIZATION_CONFIG.THUMBNAIL.webp)
           .withMetadata()
           .toBuffer();
         const thumbnailKey = `thumbnail/${baseName}.webp`;
 
         // Generate gallery version (high quality)
         const galleryWebp = await sharp(imageBuffer)
-          .resize(IMAGE_CONFIG.GALLERY.width, IMAGE_CONFIG.GALLERY.height, { fit: 'inside', position: 'center' })
-          .webp(IMAGE_CONFIG.GALLERY.webp)
+          .resize(IMAGE_OPTIMIZATION_CONFIG.GALLERY.width, IMAGE_OPTIMIZATION_CONFIG.GALLERY.height, { fit: 'inside', position: 'center' })
+          .webp(IMAGE_OPTIMIZATION_CONFIG.GALLERY.webp)
           .withMetadata()
           .toBuffer();
         const galleryKey = `gallery/${baseName}.webp`;
