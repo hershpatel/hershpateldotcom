@@ -13,7 +13,7 @@ interface UploadProgress {
   error?: string;
 }
 
-const BATCH_SIZE = 5;
+const BATCH_SIZE = 10;
 
 export function UploadSection() {
   const [uploadQueue, setUploadQueue] = useState<UploadProgress[]>([]);

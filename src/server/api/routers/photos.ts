@@ -7,7 +7,8 @@ import sharp from "sharp";
 import { images } from "~/server/db/schema";
 import { ImageStatus } from "~/app/shh/constants";
 import { eq, inArray } from "drizzle-orm";
-import Promise from "bluebird";
+import Bluebird from "bluebird";
+import exifr from 'exifr';
 
 // Image processing configuration
 const IMAGE_CONFIG = {
@@ -56,6 +57,45 @@ function getS3Client() {
 }
 const s3Client = getS3Client();
 
+interface ImageMetadata {
+  make?: string;
+  model?: string;
+  originalDateTime?: Date;
+  fNumber?: number;
+  iso?: number;
+  focalLength?: number;
+  exposureTime?: number;
+}
+
+const extractMetadata = async (imageBuffer: Uint8Array): Promise<ImageMetadata> => {
+  const metadata = await sharp(imageBuffer).metadata();
+  let result: ImageMetadata = {};
+
+  if (metadata.exif) {
+    try {
+      const exifData = await exifr.parse(imageBuffer, {
+        pick: ['Make', 'Model', 'DateTimeOriginal', 'FNumber', 'ISO', 'FocalLength', 'ExposureTime']
+      });
+      
+      if (exifData) {
+        if (exifData.Make) result.make = exifData.Make.trim();
+        if (exifData.Model) result.model = exifData.Model.trim();
+        if (exifData.DateTimeOriginal) {
+          result.originalDateTime = exifData.DateTimeOriginal;
+        }
+        if (exifData.ISO) result.iso = exifData.ISO;
+        if (exifData.FocalLength) result.focalLength = exifData.FocalLength;
+        if (exifData.ExposureTime) result.exposureTime = exifData.ExposureTime;
+        if (exifData.FNumber) result.fNumber = exifData.FNumber;
+      }
+    } catch (exifError) {
+      console.error('Error parsing EXIF data:', exifError);
+    }
+  }
+
+  return result;
+};
+
 export const photosRouter = createTRPCRouter({
   /*
     Get upload URLs for a list of files
@@ -72,7 +112,7 @@ export const photosRouter = createTRPCRouter({
   })))
   .mutation(async ({ input }) => {
     try {
-      const urls = await Promise.map(input, async (file) => {
+      const urls = await Bluebird.map(input, async (file) => {
         const prefix = file.prefix ? `${file.prefix}/` : '';
         const key = `${prefix}${file.filename}`;
         const command = new PutObjectCommand({
@@ -113,7 +153,11 @@ export const photosRouter = createTRPCRouter({
         set: {
           original_created_at: new Date(),
           status: ImageStatus.PENDING,
-          camera: undefined,
+          camera_make: undefined,
+          camera_model: undefined,
+          iso: undefined,
+          focal_length: undefined,
+          exposure_time: undefined,
           thumbnail_key: undefined,
           gallery_key: undefined,
         }
@@ -236,45 +280,6 @@ export const photosRouter = createTRPCRouter({
     }))
     .mutation(async ({ input, ctx }) => {
       try {
-        // Function to extract metadata from EXIF
-        const extractMetadata = async (imageBuffer: Uint8Array) => {
-          const metadata = await sharp(imageBuffer).metadata();
-          let camera: string | undefined = undefined;
-          let createdAt: Date | undefined = undefined;
-
-          if (metadata.exif) {
-            try {
-              const exifStr = metadata.exif.toString('utf-8');
-              
-              // Extract camera info using exec()
-              const makeRegex = /Make=([^\n]+)/;
-              const modelRegex = /Model=([^\n]+)/;
-              const makeExec = makeRegex.exec(exifStr);
-              const modelExec = modelRegex.exec(exifStr);
-              
-              if (makeExec?.[1] && modelExec?.[1]) {
-                camera = `${makeExec[1].trim()} ${modelExec[1].trim()}`;
-              }
-              
-              // Extract creation date using exec()
-              const dateRegex = /DateTime=([^\n]+)/;
-              const dateExec = dateRegex.exec(exifStr);
-              if (dateExec?.[1]) {
-                const dateStr = dateExec[1].replace(/:/g, '-').slice(0, 10) + 
-                              'T' + dateExec[1].slice(11) + 'Z';
-                const parsedDate = new Date(dateStr);
-                if (!isNaN(parsedDate.getTime())) {
-                  createdAt = parsedDate;
-                }
-              }
-            } catch (exifError) {
-              console.error('Error parsing EXIF data:', exifError);
-            }
-          }
-
-          return { camera, createdAt };
-        };
-
         // Get the original image from S3
         const getCommand = new GetObjectCommand({
           Bucket: bucketName,
@@ -286,7 +291,16 @@ export const photosRouter = createTRPCRouter({
 
         // Get image metadata and EXIF data
         const imageBuffer = await originalImage.Body.transformToByteArray();
-        const { camera, createdAt } = await extractMetadata(imageBuffer);
+        const metadata = await extractMetadata(imageBuffer);
+        const s3Metadata = {
+          make: metadata.make ?? '',
+          model: metadata.model ?? '',
+          originalCreatedAt: metadata.originalDateTime ?? new Date(),
+          iso: metadata.iso?.toString() ?? '',
+          focalLength: metadata.focalLength?.toString() ?? '',
+          exposureTime: metadata.exposureTime?.toString() ?? '',
+          fNumber: metadata.fNumber?.toString() ?? '',
+        };
 
         // Generate thumbnail (low quality)
         const thumbnailWebp = await sharp(imageBuffer)
@@ -311,8 +325,8 @@ export const photosRouter = createTRPCRouter({
           Body: thumbnailWebp,
           ContentType: 'image/webp',
           Metadata: {
-            camera: camera ?? '',
-            originalCreatedAt: createdAt?.toISOString() ?? '',
+            ...s3Metadata,
+            originalCreatedAt: s3Metadata.originalCreatedAt.toISOString(),
           },
         }));
 
@@ -323,8 +337,8 @@ export const photosRouter = createTRPCRouter({
           Body: galleryWebp,
           ContentType: 'image/webp',
           Metadata: {
-            camera: camera ?? '',
-            originalCreatedAt: createdAt?.toISOString() ?? '',
+            ...s3Metadata,
+            originalCreatedAt: s3Metadata.originalCreatedAt.toISOString(),
           },
         }));
 
@@ -334,8 +348,13 @@ export const photosRouter = createTRPCRouter({
           .set({
             thumbnail_key: thumbnailKey,
             gallery_key: galleryKey,
-            camera: camera ?? '',
-            original_created_at: createdAt ?? new Date(),
+            camera_make: s3Metadata.make,
+            camera_model: s3Metadata.model,
+            original_created_at: s3Metadata.originalCreatedAt,
+            iso: s3Metadata.iso,
+            focal_length: s3Metadata.focalLength,
+            exposure_time: s3Metadata.exposureTime,
+            f_number: s3Metadata.fNumber,
             status: ImageStatus.READY,
           })
           .where(eq(images.full_key, input.fullKey))

@@ -1,0 +1,1 @@
+ALTER TABLE "hershpateldotcom_images" ADD COLUMN "f_number" varchar(256);
