@@ -9,6 +9,7 @@ import {
   uuid,
   pgEnum,
 } from "drizzle-orm/pg-core";
+import { ImageStatus } from "~/app/shh/constants";
 
 /**
  * This is an example of how to use the multi-project schema feature of Drizzle ORM. Use the same
@@ -20,21 +21,15 @@ export const createTable = pgTableCreator((name) => `hershpateldotcom_${name}`);
 
 export const imageStatusEnum = pgEnum('image_status', ['pending', 'ready', 'disabled']);
 
-// Add the TypeScript enum
-export enum ImageStatus {
-  PENDING = 'pending',
-  READY = 'ready',
-  DISABLED = 'disabled'
-}
-
 export const images = createTable(
   "images",
   {
     pk: uuid("pk").primaryKey().defaultRandom(),
     status: imageStatusEnum("status").notNull().default(ImageStatus.PENDING),
-    full_key: varchar("full_key", { length: 256 }).notNull(),
-    thumbnail_key: varchar("thumbnail_key", { length: 256 }).notNull(),
-    gallery_key: varchar("gallery_key", { length: 256 }).notNull(),
+    photo_name: varchar("photo_name", { length: 256 }).notNull().unique(),
+    full_key: varchar("full_key", { length: 256 }).notNull().unique(),
+    thumbnail_key: varchar("thumbnail_key", { length: 256 }),
+    gallery_key: varchar("gallery_key", { length: 256 }),
     camera: varchar("camera", { length: 256 }),
     original_created_at: timestamp("original_created_at", { withTimezone: true }).notNull(),
   },

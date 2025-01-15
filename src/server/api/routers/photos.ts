@@ -1,10 +1,12 @@
-import { S3Client, ListObjectsV2Command, PutObjectCommand, GetObjectCommand } from "@aws-sdk/client-s3";
+import { S3Client, PutObjectCommand, GetObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { z } from "zod";
 import { env } from "~/env";
 import { createTRPCRouter, publicProcedure } from "~/server/api/trpc";
 import sharp from "sharp";
 import { images } from "~/server/db/schema";
+import { ImageStatus } from "~/app/shh/constants";
+import { eq } from "drizzle-orm";
 
 // Extract bucket name from ARN
 // Format: arn:aws:s3:::bucket-name
@@ -34,79 +36,173 @@ function getS3Client() {
 const s3Client = getS3Client();
 
 export const photosRouter = createTRPCRouter({
+  /*
+    Get upload URLs for a list of files
+  */
+  getUploadUrls: publicProcedure
+  .input(z.array(z.object({
+    filename: z.string(),
+    contentType: z.string(),
+    prefix: z.string().optional()
+  })))
+  .output(z.array(z.object({
+    url: z.string(),
+    key: z.string()
+  })))
+  .mutation(async ({ input }) => {
+    try {
+      const urls = await Promise.all(
+        input.map(async (file) => {
+          const prefix = file.prefix ? `${file.prefix}/` : '';
+          const key = `${prefix}${file.filename}`;
+          const command = new PutObjectCommand({
+            Bucket: bucketName,
+            Key: key,
+            ContentType: file.contentType
+          });
+
+          const url = await getSignedUrl(s3Client, command, { expiresIn: 3600 });
+          return { url, key };
+        })
+      );
+
+      return urls;
+    } catch (error) {
+      console.error('Error generating upload URLs:', error);
+      throw new Error('Failed to generate upload URLs');
+    }
+  }),
+
+  /*
+    Create a photo record in the database
+  */
+  createPhotoRecord: publicProcedure
+  .input(z.object({
+    photoName: z.string(),
+    fullKey: z.string(),
+  }))
+  .mutation(async ({ input, ctx }) => {
+    const [result] = await ctx.db.insert(images)
+      .values({
+        photo_name: input.photoName,
+        full_key: input.fullKey,
+        original_created_at: new Date(),
+        status: ImageStatus.PENDING,
+      })
+      .onConflictDoUpdate({
+        target: images.full_key,
+        set: {
+          original_created_at: new Date(),
+          status: ImageStatus.PENDING,
+          camera: undefined,
+          thumbnail_key: undefined,
+          gallery_key: undefined,
+        }
+      })
+      .returning({ pk: images.pk });
+
+    if (!result) {
+      throw new Error('Failed to insert image into database');
+    }
+
+    return result;
+  }),
+
+  /*
+    List photos from the database
+  */
   listPhotos: publicProcedure
     .input(z.object({
-      prefix: z.string().optional(),
+      status: z.nativeEnum(ImageStatus),
     }))
     .output(z.array(z.object({
-      url: z.string(),
-      key: z.string(),
-      size: z.number().optional()
+      pk: z.string(),
+      fullKey: z.string(),
+      thumbnailKey: z.string().nullable(),
+      galleryKey: z.string().nullable(),
+      status: z.nativeEnum(ImageStatus),
+      createdAt: z.date(),
     })))
-    .query(async ({ input }) => {
-      
+    .query(async ({ input, ctx }) => {
       try {
-        const request = new ListObjectsV2Command({
-          Bucket: bucketName,
-          Prefix: input.prefix ?? "",
-          MaxKeys: 1000,
+        const photos = await ctx.db.query.images.findMany({
+          where: (images, { eq }) => eq(images.status, input.status),
+          columns: {
+            pk: true,
+            full_key: true,
+            thumbnail_key: true,
+            gallery_key: true,
+            status: true,
+            original_created_at: true,
+          },
         });
-        
-        const response = await s3Client.send(request);
-        
-        // Extract keys and prepend CloudFront URL
-        const files = response.Contents?.map(obj => {
-          const key = obj.Key;
-          if (!key) return {url: "", key: "", size: 0};
-          // Ensure the CloudFront URL doesn't end with a slash while the key doesn't start with one
-          const cloudFrontUrl = env.CLOUDFRONT_URL.replace(/\/$/, "");
-          const cleanKey = key.startsWith("/") ? key.slice(1) : key;
-          console.log(cleanKey);
-          console.log(`${cloudFrontUrl}/${cleanKey}`);
-          return { url: `${cloudFrontUrl}/${cleanKey}`, key: cleanKey, size: obj.Size };
-        }).filter(photo => photo.url !== "") ?? [];
 
-        return files;
+        return photos.map(photo => ({
+          pk: photo.pk,
+          fullKey: photo.full_key,
+          thumbnailKey: photo.thumbnail_key,
+          galleryKey: photo.gallery_key,
+          status: photo.status as ImageStatus,
+          createdAt: photo.original_created_at,
+        }));
       } catch (error) {
         console.error('Error listing photos:', error);
-        throw new Error('Failed to list photos from S3');
+        throw new Error('Failed to list photos from database');
       }
     }),
 
-  getUploadUrls: publicProcedure
-    .input(z.array(z.object({
-      filename: z.string(),
-      contentType: z.string(),
-      prefix: z.string().optional()
-    })))
+  /*
+    List photos with Cloudfront URLs
+  */
+  listPhotosWithUrls: publicProcedure
+    .input(z.object({
+      status: z.nativeEnum(ImageStatus),
+    }))
     .output(z.array(z.object({
-      url: z.string(),
-      key: z.string()
+      pk: z.string(),
+      fullKey: z.string(),
+      thumbnailKey: z.string().nullable(),
+      galleryKey: z.string().nullable(),
+      status: z.nativeEnum(ImageStatus),
+      createdAt: z.date(),
+      thumbnailUrl: z.string().nullable(),
+      galleryUrl: z.string().nullable(),
+      fullUrl: z.string(),
     })))
-    .mutation(async ({ input }) => {
+    .query(async ({ input, ctx }) => {
       try {
-        const urls = await Promise.all(
-          input.map(async (file) => {
-            const prefix = file.prefix ? `${file.prefix}/` : '';
-            const key = `${prefix}${file.filename}`;
-            const command = new PutObjectCommand({
-              Bucket: bucketName,
-              Key: key,
-              ContentType: file.contentType
-            });
+        const photos = await ctx.db.query.images.findMany({
+          where: (images, { eq }) => eq(images.status, input.status),
+          columns: {
+            pk: true,
+            full_key: true,
+            thumbnail_key: true,
+            gallery_key: true,
+            status: true,
+            original_created_at: true,
+          },
+        });
 
-            const url = await getSignedUrl(s3Client, command, { expiresIn: 3600 });
-            return { url, key };
-          })
-        );
-
-        return urls;
+        return photos.map(photo => ({
+          pk: photo.pk,
+          fullKey: photo.full_key,
+          thumbnailKey: photo.thumbnail_key,
+          galleryKey: photo.gallery_key,
+          status: photo.status as ImageStatus,
+          createdAt: photo.original_created_at,
+          thumbnailUrl: photo.thumbnail_key ? `${env.CLOUDFRONT_URL}/${photo.thumbnail_key}` : null,
+          galleryUrl: photo.gallery_key ? `${env.CLOUDFRONT_URL}/${photo.gallery_key}` : null,
+          fullUrl: `${env.CLOUDFRONT_URL}/${photo.full_key}`,
+        }));
       } catch (error) {
-        console.error('Error generating upload URLs:', error);
-        throw new Error('Failed to generate upload URLs');
+        console.error('Error listing photos with URLs:', error);
+        throw new Error('Failed to list photos from database');
       }
     }),
 
+  /*
+    Optimize an image and store the results in the s3 & database
+  */
   optimizeImage: publicProcedure
     .input(z.object({
       fullKey: z.string(),
@@ -217,28 +313,21 @@ export const photosRouter = createTRPCRouter({
           },
         }));
 
-        // Store in database and get the generated pk
-        const [result] = await ctx.db.insert(images)
-          .values({
-            full_key: input.fullKey,
+        // Update existing record in database
+        const [result] = await ctx.db
+          .update(images)
+          .set({
             thumbnail_key: thumbnailKey,
             gallery_key: galleryKey,
             camera: camera ?? '',
             original_created_at: createdAt ?? new Date(),
+            status: ImageStatus.READY,
           })
-          .onConflictDoUpdate({
-            target: images.full_key,
-            set: {
-              thumbnail_key: thumbnailKey,
-              gallery_key: galleryKey,
-              camera: camera ?? '',
-              original_created_at: createdAt ?? new Date(),
-            }
-          })
+          .where(eq(images.full_key, input.fullKey))
           .returning({ pk: images.pk });
 
         if (!result) {
-          throw new Error('Failed to insert image into database');
+          throw new Error('Failed to update image in database');
         }
 
         return {

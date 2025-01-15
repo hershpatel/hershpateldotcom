@@ -15,6 +15,20 @@
       "when": 1736895366225,
       "tag": "0001_majestic_luckman",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1736895818465,
+      "tag": "0002_damp_ender_wiggin",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1736898040847,
+      "tag": "0003_free_sentry",
+      "breakpoints": true
     }
   ]
 }

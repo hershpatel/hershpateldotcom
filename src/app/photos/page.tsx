@@ -5,13 +5,7 @@ import Image from 'next/image'
 import { useState, useCallback, useEffect } from 'react'
 import { Dialog, DialogPanel } from '@headlessui/react'
 import { api } from "~/trpc/react"
-
-// Photo type
-type Photo = {
-  id: string;
-  src: string;
-  name: string;
-}
+import { ImageStatus } from '../shh/constants'
 
 export default function Photos() {
   const [selectedPhotoIndex, setSelectedPhotoIndex] = useState<number | null>(null);
@@ -20,14 +14,20 @@ export default function Photos() {
   const [loadedImages, setLoadedImages] = useState<Set<string>>(new Set());
 
   // Fetch S3 photos
-  const { data: s3Photos = [], isLoading: isLoadingPhotos } = api.photos.listPhotos.useQuery({prefix: "to-optimize/"});
+  const { data: dbPhotos = [], isLoading: isLoadingPhotos } = api.photos.listPhotosWithUrls.useQuery({status: ImageStatus.READY});
   
-  // Convert S3 URLs to Photo objects
-  const photos: Photo[] = s3Photos.map((photo, index) => ({
-    id: `s3-${index}`,
-    src: photo.url,
-    name: photo.key.split('/').pop() ?? photo.key,
-  }));
+  // Convert to Photo objects
+  const photos: {
+    id: string;
+    thumbnailSrc: string;
+    gallerySrc: string;
+    name: string;
+  }[] = dbPhotos.map((photo) => ({
+    id: photo.pk,
+    thumbnailSrc: photo.thumbnailUrl ?? '',
+    gallerySrc: photo.galleryUrl ?? '',
+    name: photo.fullKey.split('/').pop() ?? photo.fullKey,
+  })).filter(photo => photo.thumbnailSrc && photo.gallerySrc);
 
   const handleImageLoad = (photoId: string) => {
     setLoadedImages(prev => new Set([...prev, photoId]));
@@ -114,7 +114,7 @@ export default function Photos() {
                   </div>
                 )}
                 <Image
-                  src={photo.src}
+                  src={photo.thumbnailSrc}
                   alt={photo.name}
                   fill
                   className={`object-cover transition-opacity duration-300 ${
@@ -177,7 +177,7 @@ export default function Photos() {
 
                 <div className="w-[75vw] h-[85vh] relative">
                   <Image
-                    src={photos[selectedPhotoIndex].src}
+                    src={photos[selectedPhotoIndex].gallerySrc}
                     alt={photos[selectedPhotoIndex].name}
                     fill
                     className="object-contain"

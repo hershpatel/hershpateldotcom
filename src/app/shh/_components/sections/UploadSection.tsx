@@ -3,6 +3,7 @@
 import { useState, useCallback } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { api } from '~/trpc/react';
+import { ImageType } from '../../constants';
 
 interface UploadProgress {
   file: File;
@@ -41,6 +42,7 @@ export function UploadSection() {
   });
 
   const getUploadUrls = api.photos.getUploadUrls.useMutation();
+  const createPhotoRecord = api.photos.createPhotoRecord.useMutation();
 
   const uploadBatch = async (batch: UploadProgress[]) => {
     try {
@@ -49,7 +51,7 @@ export function UploadSection() {
         batch.map(item => ({
           filename: item.file.name,
           contentType: item.file.type,
-          prefix: 'to-optimize'
+          prefix: ImageType.FULL
         }))
       );
 
@@ -57,7 +59,8 @@ export function UploadSection() {
       await Promise.all(
         batch.map(async (item, index) => {
           const uploadUrl = urlsResponse[index]?.url;
-          if (!uploadUrl) {
+          const key = urlsResponse[index]?.key;
+          if (!uploadUrl || !key) {
             throw new Error('Failed to get upload URL');
           }
 
@@ -81,6 +84,12 @@ export function UploadSection() {
             if (!response.ok) {
               throw new Error(`Upload failed with status ${response.status}`);
             }
+
+            // Create database record
+            await createPhotoRecord.mutateAsync({
+              photoName: item.file.name,
+              fullKey: key,
+            });
 
             // Update status to completed
             setUploadQueue(prev => prev.map(queueItem => 
