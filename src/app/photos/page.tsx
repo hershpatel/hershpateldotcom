@@ -155,104 +155,106 @@ export default function Photos() {
         <div className="flex flex-col gap-8 mb-8">
           <Link href="/" className="text-[1.6rem] link-style inline-block">&larr; back</Link>
 
-          <div className="flex flex-col gap-4">
-            <div className="flex gap-4 items-center">
-              <button 
-                onClick={handleDescending}
-                className={`
-                  text-[2rem] transition-all w-fit
-                  ${!isRandom && !isAscending
-                    ? 'translate-y-[1px] opacity-60 shadow-inner' 
-                    : 'hover:opacity-80 drop-shadow-md'
-                  }
-                `}
-                title="show newest first"
-              >
-                ⬇️
-              </button>
-
-              <button 
-                onClick={handleAscending}
-                className={`
-                  text-[2rem] transition-all w-fit
-                  ${isAscending 
-                    ? 'translate-y-[1px] opacity-60 shadow-inner' 
-                    : 'hover:opacity-80 drop-shadow-md'
-                  }
-                `}
-                title="show oldest first"
-              >
-                ⬆️
-              </button>
-
-              <button 
-                onClick={handleShuffle}
-                className={`
-                  text-[2rem] transition-all w-fit
-                  ${isRandom 
-                    ? 'translate-y-[1px] opacity-60 shadow-inner' 
-                    : 'hover:opacity-80 drop-shadow-md'
-                  }
-                `}
-                title="show in random order"
-              >
-                🔀
-              </button>
-
-              <div className="relative">
-                <button
-                  onClick={() => setIsTagDropdownOpen(!isTagDropdownOpen)}
+          {!isLoadingPhotos && photos.length > 0 && (
+            <div className="flex flex-col gap-4">
+              <div className="flex gap-4 items-center">
+                <button 
+                  onClick={handleDescending}
                   className={`
                     text-[2rem] transition-all w-fit
-                    ${selectedTags.length > 0
+                    ${!isRandom && !isAscending
                       ? 'translate-y-[1px] opacity-60 shadow-inner' 
                       : 'hover:opacity-80 drop-shadow-md'
                     }
                   `}
-                  title="filter by tags"
+                  title="show newest first"
                 >
-                  🏷️
+                  ⬇️
                 </button>
-                {isTagDropdownOpen && (
-                  <div className="absolute z-10 mt-1 w-72 overflow-auto rounded-md bg-white py-1 shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none text-[1.4rem]">
-                    {tags
-                      .filter(tag => !selectedTags.find(t => t.pk === tag.pk))
-                      .map((tag) => (
-                        <button
-                          key={tag.pk}
-                          className="w-full px-4 py-2 text-left hover:bg-blue-500 hover:text-white"
-                          onClick={() => {
-                            handleTagSelect(tag);
-                            setIsTagDropdownOpen(false);
-                          }}
-                        >
-                          {tag.name}
-                        </button>
-                      ))}
-                  </div>
-                )}
-              </div>
-            </div>
 
-            {selectedTags.length > 0 && (
-              <div className="flex flex-wrap gap-2">
-                {selectedTags.map((tag) => (
-                  <span
-                    key={tag.pk}
-                    className="inline-flex items-center gap-1 rounded-full bg-blue-100 px-3 py-1 text-[1.2rem] text-blue-700"
+                <button 
+                  onClick={handleAscending}
+                  className={`
+                    text-[2rem] transition-all w-fit
+                    ${isAscending 
+                      ? 'translate-y-[1px] opacity-60 shadow-inner' 
+                      : 'hover:opacity-80 drop-shadow-md'
+                    }
+                  `}
+                  title="show oldest first"
+                >
+                  ⬆️
+                </button>
+
+                <button 
+                  onClick={handleShuffle}
+                  className={`
+                    text-[2rem] transition-all w-fit
+                    ${isRandom 
+                      ? 'translate-y-[1px] opacity-60 shadow-inner' 
+                      : 'hover:opacity-80 drop-shadow-md'
+                    }
+                  `}
+                  title="show in random order"
+                >
+                  🔀
+                </button>
+
+                <div className="relative">
+                  <button
+                    onClick={() => setIsTagDropdownOpen(!isTagDropdownOpen)}
+                    className={`
+                      text-[2rem] transition-all w-fit
+                      ${selectedTags.length > 0
+                        ? 'translate-y-[1px] opacity-60 shadow-inner' 
+                        : 'hover:opacity-80 drop-shadow-md'
+                      }
+                    `}
+                    title="filter by tags"
                   >
-                    {tag.name}
-                    <button
-                      onClick={() => handleTagRemove(tag.pk)}
-                      className="ml-1 rounded-full hover:bg-blue-200 p-1"
-                    >
-                      ×
-                    </button>
-                  </span>
-                ))}
+                    🏷️
+                  </button>
+                  {isTagDropdownOpen && (
+                    <div className="absolute z-10 mt-1 w-72 overflow-auto rounded-md bg-white py-1 shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none text-[1.4rem]">
+                      {tags
+                        .filter(tag => !selectedTags.find(t => t.pk === tag.pk))
+                        .map((tag) => (
+                          <button
+                            key={tag.pk}
+                            className="w-full px-4 py-2 text-left hover:bg-blue-500 hover:text-white"
+                            onClick={() => {
+                              handleTagSelect(tag);
+                              setIsTagDropdownOpen(false);
+                            }}
+                          >
+                            {tag.name}
+                          </button>
+                        ))}
+                    </div>
+                  )}
+                </div>
               </div>
-            )}
-          </div>
+
+              {selectedTags.length > 0 && (
+                <div className="flex flex-wrap gap-2">
+                  {selectedTags.map((tag) => (
+                    <span
+                      key={tag.pk}
+                      className="inline-flex items-center gap-1 rounded-full bg-blue-100 px-3 py-1 text-[1.2rem] text-blue-700"
+                    >
+                      {tag.name}
+                      <button
+                        onClick={() => handleTagRemove(tag.pk)}
+                        className="ml-1 rounded-full hover:bg-blue-200 p-1"
+                      >
+                        ×
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
         </div>
         
         {isLoadingPhotos ? (
