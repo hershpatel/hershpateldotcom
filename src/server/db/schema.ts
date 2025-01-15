@@ -40,6 +40,7 @@ export const images = createTable(
   },
   (table) => ({
     createdAtIdx: index("created_at_idx").on(table.original_created_at),
+    statusIdx: index("status_idx").on(table.status),
   })
 );
 
