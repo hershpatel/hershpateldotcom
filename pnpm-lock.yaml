@@ -41,6 +41,9 @@ importers:
       bcryptjs:
         specifier: ^2.4.3
         version: 2.4.3
+      bluebird:
+        specifier: ^3.7.2
+        version: 3.7.2
       drizzle-orm:
         specifier: ^0.33.0
         version: 0.33.0(@types/react@18.3.18)(postgres@3.4.5)(react@18.3.1)
@@ -78,6 +81,9 @@ importers:
         specifier: ^3.23.3
         version: 3.24.1
     devDependencies:
+      '@types/bluebird':
+        specifier: ^3.5.42
+        version: 3.5.42
       '@types/eslint':
         specifier: ^8.56.10
         version: 8.56.12
@@ -1159,6 +1165,9 @@ packages:
   '@types/bcryptjs@2.4.6':
     resolution: {integrity: sha512-9xlo6R2qDs5uixm0bcIqCeMCE6HiQsIyel9KQySStiyqNl2tnj2mP3DX1Nf56MD6KMenNNlBBsy3LJ7gUEQPXQ==}
 
+  '@types/bluebird@3.5.42':
+    resolution: {integrity: sha512-Jhy+MWRlro6UjVi578V/4ZGNfeCOcNCp0YaFNIUGFKlImowqwb1O/22wDVk3FDGMLqxdpOV3qQHD5fPEH4hK6A==}
+
   '@types/eslint@8.56.12':
     resolution: {integrity: sha512-03ruubjWyOHlmljCVoxSuNDdmfZDzsrrz0P2LeJsOXr+ZwFQ+0yQIwNCwt/GYhV7Z31fgtXJTAEs+FYlEL851g==}
 
@@ -1345,6 +1354,9 @@ packages:
   binary-extensions@2.3.0:
     resolution: {integrity: sha512-Ceh+7ox5qe7LJuLHoY0feh3pHuUDHAcRUeyL2VYghZwfpkNIy/+8Ocg0a3UuSoYzavmylwuLWQOf3hl0jjMMIw==}
     engines: {node: '>=8'}
+
+  bluebird@3.7.2:
+    resolution: {integrity: sha512-XpNj6GDQzdfW+r2Wnn7xiSAd7TM3jzkxGXBGTtWKuSXv1xUV+azxAm8jdWZN06QTQk+2N2XB9jRDkvbmQmcRtg==}
 
   bowser@2.11.0:
     resolution: {integrity: sha512-AlcaJBi/pqqJBIQ8U9Mcpc9i8Aqxn88Skv5d+xBX006BY5u8N3mGLHa5Lgppa7L/HfwgwLgZ6NYs+Ag6uUmJRA==}
@@ -4135,6 +4147,8 @@ snapshots:
 
   '@types/bcryptjs@2.4.6': {}
 
+  '@types/bluebird@3.5.42': {}
+
   '@types/eslint@8.56.12':
     dependencies:
       '@types/estree': 1.0.6
@@ -4361,6 +4375,8 @@ snapshots:
   bcryptjs@2.4.3: {}
 
   binary-extensions@2.3.0: {}
+
+  bluebird@3.7.2: {}
 
   bowser@2.11.0: {}
 

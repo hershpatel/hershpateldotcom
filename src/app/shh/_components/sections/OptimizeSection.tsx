@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { api } from "~/trpc/react";
 import { ImageStatus } from "../../constants";
+import Bluebird from 'bluebird';
 
 type OptimizationStatus = Record<string, {
   status: 'pending' | 'optimizing' | 'completed' | 'error';
@@ -21,7 +22,7 @@ const STATUS_EMOJI: Record<OptimizationStatus[string]['status'], string> = {
   error: '❌',
 } as const;
 
-const BATCH_SIZE = 5;
+const BATCH_SIZE = 10;
 
 export function OptimizeSection() {
   const [optimizationStatus, setOptimizationStatus] = useState<OptimizationStatus>({});
@@ -76,19 +77,23 @@ export function OptimizeSection() {
       });
       setOptimizationStatus(initialStatus);
 
-      // Process in batches of BATCH_SIZE
-      for (let i = 0; i < photos.length; i += BATCH_SIZE) {
-        const batch = photos.slice(i, i + BATCH_SIZE);
-        await Promise.all(batch.map(photo => optimizeImage(photo.fullKey)));
-      }
+      // Process in batches using Bluebird
+      await Bluebird.map(photos, async (photo) => {
+        await optimizeImage(photo.fullKey);
+      }, { concurrency: BATCH_SIZE });
     } finally {
       setIsOptimizing(false);
     }
   };
 
-  const formatSize = (bytes: number) => {
+  const toMB = (bytes: number) => {
     const mb = bytes / (1024 * 1024);
     return `${mb.toFixed(2)}MB`;
+  };
+
+  const toKB = (bytes: number) => {
+    const kb = bytes / 1024;
+    return `${kb.toFixed(2)}KB`;
   };
 
   return (
@@ -121,13 +126,13 @@ export function OptimizeSection() {
                 </div>
                 {status?.status === 'completed' && status.sizes && (
                   <div className="ml-8 text-xlg text-gray-600">
-                    Full: {formatSize(status.sizes.fullSize)} →{' '}
-                    Gallery: {formatSize(status.sizes.gallerySize)},{' '}
-                    Thumbnail: {formatSize(status.sizes.thumbnailSize)}
+                    Full: {toMB(status.sizes.fullSize)} →{' '}
+                    Gallery: {toKB(status.sizes.gallerySize)},{' '}
+                    Thumbnail: {toKB(status.sizes.thumbnailSize)}
                   </div>
                 )}
                 {status?.status === 'error' && (
-                  <div className="ml-8 text-sm text-red-600">
+                  <div className="ml-8 text-lg text-red-600">
                     Error: {status.error}
                   </div>
                 )}

@@ -114,7 +114,7 @@ export default function Photos() {
                   </div>
                 )}
                 <Image
-                  src={photo.thumbnailSrc}
+                  src={photo.gallerySrc}
                   alt={photo.name}
                   fill
                   className={`object-cover transition-opacity duration-300 ${

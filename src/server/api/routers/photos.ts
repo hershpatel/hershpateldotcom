@@ -7,6 +7,27 @@ import sharp from "sharp";
 import { images } from "~/server/db/schema";
 import { ImageStatus } from "~/app/shh/constants";
 import { eq } from "drizzle-orm";
+import Promise from "bluebird";
+
+// Image processing configuration
+const IMAGE_CONFIG = {
+  THUMBNAIL: {
+    width: 300,
+    height: 300,
+    webp: {
+      quality: 100,
+      effort: 4
+    }
+  },
+  GALLERY: {
+    width: 2700,
+    height: null,
+    webp: {
+      quality: 80,
+      effort: 4
+    }
+  }
+} as const;
 
 // Extract bucket name from ARN
 // Format: arn:aws:s3:::bucket-name
@@ -51,20 +72,18 @@ export const photosRouter = createTRPCRouter({
   })))
   .mutation(async ({ input }) => {
     try {
-      const urls = await Promise.all(
-        input.map(async (file) => {
-          const prefix = file.prefix ? `${file.prefix}/` : '';
-          const key = `${prefix}${file.filename}`;
-          const command = new PutObjectCommand({
-            Bucket: bucketName,
-            Key: key,
-            ContentType: file.contentType
-          });
+      const urls = await Promise.map(input, async (file) => {
+        const prefix = file.prefix ? `${file.prefix}/` : '';
+        const key = `${prefix}${file.filename}`;
+        const command = new PutObjectCommand({
+          Bucket: bucketName,
+          Key: key,
+          ContentType: file.contentType
+        });
 
-          const url = await getSignedUrl(s3Client, command, { expiresIn: 3600 });
-          return { url, key };
-        })
-      );
+        const url = await getSignedUrl(s3Client, command, { expiresIn: 3600 });
+        return { url, key };
+      }, { concurrency: 10 }); // Limit concurrent operations to 10
 
       return urls;
     } catch (error) {
@@ -269,22 +288,16 @@ export const photosRouter = createTRPCRouter({
 
         // Generate thumbnail (low quality)
         const thumbnailWebp = await sharp(imageBuffer)
-          .resize(300, 300, { fit: 'inside', position: 'center' })
-          .webp({
-            quality: 80,
-            effort: 6
-          })
+          .resize(IMAGE_CONFIG.THUMBNAIL.width, IMAGE_CONFIG.THUMBNAIL.height, { fit: 'inside', position: 'center' })
+          .webp(IMAGE_CONFIG.THUMBNAIL.webp)
           .withMetadata()
           .toBuffer();
         const thumbnailKey = `thumbnail/${baseName}.webp`;
 
         // Generate gallery version (high quality)
         const galleryWebp = await sharp(imageBuffer)
-          .resize(2500, null, { fit: 'inside', position: 'center' })
-          .webp({
-            quality: 85,
-            effort: 6
-          })
+          .resize(IMAGE_CONFIG.GALLERY.width, IMAGE_CONFIG.GALLERY.height, { fit: 'inside', position: 'center' })
+          .webp(IMAGE_CONFIG.GALLERY.webp)
           .withMetadata()
           .toBuffer();
         const galleryKey = `gallery/${baseName}.webp`;

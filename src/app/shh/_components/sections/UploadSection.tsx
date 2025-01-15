@@ -4,6 +4,7 @@ import { useState, useCallback } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { api } from '~/trpc/react';
 import { ImageType } from '../../constants';
+import Promise from 'bluebird';
 
 interface UploadProgress {
   file: File;
@@ -55,59 +56,57 @@ export function UploadSection() {
         }))
       );
 
-      // Upload files in parallel
-      await Promise.all(
-        batch.map(async (item, index) => {
-          const uploadUrl = urlsResponse[index]?.url;
-          const key = urlsResponse[index]?.key;
-          if (!uploadUrl || !key) {
-            throw new Error('Failed to get upload URL');
-          }
+      // Using Bluebird's Promise.map with concurrency control
+      await Promise.map(batch, async (item, index) => {
+        const uploadUrl = urlsResponse[index]?.url;
+        const key = urlsResponse[index]?.key;
+        if (!uploadUrl || !key) {
+          throw new Error('Failed to get upload URL');
+        }
 
-          try {
-            // Update status to uploading
-            setUploadQueue(prev => prev.map(queueItem => 
-              queueItem.file === item.file 
-                ? { ...queueItem, status: 'uploading' }
-                : queueItem
-            ));
+        try {
+          // Update status to uploading
+          setUploadQueue(prev => prev.map(queueItem => 
+            queueItem.file === item.file 
+              ? { ...queueItem, status: 'uploading' }
+              : queueItem
+          ));
 
-            // Upload to S3 using pre-signed URL
-            const response = await fetch(uploadUrl, {
-              method: 'PUT',
-              body: item.file,
-              headers: {
-                'Content-Type': item.file.type,
-              }
-            });
-
-            if (!response.ok) {
-              throw new Error(`Upload failed with status ${response.status}`);
+          // Upload to S3 using pre-signed URL
+          const response = await fetch(uploadUrl, {
+            method: 'PUT',
+            body: item.file,
+            headers: {
+              'Content-Type': item.file.type,
             }
+          });
 
-            // Create database record
-            await createPhotoRecord.mutateAsync({
-              photoName: item.file.name,
-              fullKey: key,
-            });
-
-            // Update status to completed
-            setUploadQueue(prev => prev.map(queueItem => 
-              queueItem.file === item.file 
-                ? { ...queueItem, status: 'completed' }
-                : queueItem
-            ));
-          } catch (error) {
-            const errorMessage = error instanceof Error ? error.message : 'Upload failed';
-            setUploadQueue(prev => prev.map(queueItem => 
-              queueItem.file === item.file 
-                ? { ...queueItem, status: 'error', error: errorMessage }
-                : queueItem
-            ));
-            throw error;
+          if (!response.ok) {
+            throw new Error(`Upload failed with status ${response.status}`);
           }
-        })
-      );
+
+          // Create database record
+          await createPhotoRecord.mutateAsync({
+            photoName: item.file.name,
+            fullKey: key,
+          });
+
+          // Update status to completed
+          setUploadQueue(prev => prev.map(queueItem => 
+            queueItem.file === item.file 
+              ? { ...queueItem, status: 'completed' }
+              : queueItem
+          ));
+        } catch (error) {
+          const errorMessage = error instanceof Error ? error.message : 'Upload failed';
+          setUploadQueue(prev => prev.map(queueItem => 
+            queueItem.file === item.file 
+              ? { ...queueItem, status: 'error', error: errorMessage }
+              : queueItem
+          ));
+          throw error;
+        }
+      }, { concurrency: BATCH_SIZE });  // Control concurrent uploads
     } catch (error) {
       console.error('Batch upload failed:', error);
     }
