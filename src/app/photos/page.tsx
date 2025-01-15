@@ -11,7 +11,8 @@ export default function Photos() {
   const [selectedPhotoIndex, setSelectedPhotoIndex] = useState<number | null>(null);
   const [touchStart, setTouchStart] = useState<number | null>(null);
   const [touchEnd, setTouchEnd] = useState<number | null>(null);
-  const [loadedImages, setLoadedImages] = useState<Set<string>>(new Set());
+  const [loadedThumbnails, setLoadedThumbnails] = useState<Set<string>>(new Set());
+  const [loadedGalleryImages, setLoadedGalleryImages] = useState<Set<string>>(new Set());
 
   // Fetch S3 photos
   const { data: dbPhotos = [], isLoading: isLoadingPhotos } = api.photos.listPhotosWithUrls.useQuery({status: ImageStatus.READY});
@@ -28,10 +29,6 @@ export default function Photos() {
     gallerySrc: photo.galleryUrl ?? '',
     name: photo.fullKey.split('/').pop() ?? photo.fullKey,
   })).filter(photo => photo.thumbnailSrc && photo.gallerySrc);
-
-  const handleImageLoad = (photoId: string) => {
-    setLoadedImages(prev => new Set([...prev, photoId]));
-  };
 
   const handleTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
     const touch = e.targetTouches[0];
@@ -108,7 +105,7 @@ export default function Photos() {
                 className="aspect-square relative cursor-pointer"
                 onClick={() => setSelectedPhotoIndex(index)}
               >
-                {!loadedImages.has(photo.id) && (
+                {!loadedThumbnails.has(photo.id) && (
                   <div className="absolute inset-0 flex items-center justify-center bg-gray-100">
                     <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-gray-600"></div>
                   </div>
@@ -118,10 +115,10 @@ export default function Photos() {
                   alt={photo.name}
                   fill
                   className={`object-cover transition-opacity ${
-                    loadedImages.has(photo.id) ? 'opacity-100' : 'opacity-0'
+                    loadedThumbnails.has(photo.id) ? 'opacity-100' : 'opacity-0'
                   }`}
                   sizes="(max-width: 640px) 75vw, (max-width: 768px) 37.5vw, (max-width: 1024px) 25vw, 18.75vw"
-                  onLoad={() => handleImageLoad(photo.id)}
+                  onLoad={() => setLoadedThumbnails(prev => new Set([...prev, photo.id]))}
                 />
               </div>
             ))}
@@ -175,16 +172,31 @@ export default function Photos() {
                   </button>
                 </div>
                 <div className="w-[75vw] h-[85vh] relative">
-                  <Image
-                    src={photos[selectedPhotoIndex].gallerySrc}
-                    alt={photos[selectedPhotoIndex].name}
-                    fill
-                    className={`object-contain ${
-                      loadedImages.has(photos[selectedPhotoIndex].id) ? 'opacity-100' : 'opacity-0'
-                    }`}
-                    sizes="(max-width: 1536px) 100vw, 1536px"
-                    priority
-                  />
+                  {(() => {
+                    const selectedPhoto = photos[selectedPhotoIndex];
+                    if (!selectedPhoto) return null;
+                    
+                    return (
+                      <>
+                        {!loadedGalleryImages.has(selectedPhoto.id) && (
+                          <div className="absolute inset-0 flex items-center justify-center">
+                            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-gray-200"></div>
+                          </div>
+                        )}
+                        <Image
+                          src={selectedPhoto.gallerySrc}
+                          alt={selectedPhoto.name}
+                          fill
+                          className={`object-contain ${
+                            loadedGalleryImages.has(selectedPhoto.id) ? 'opacity-100' : 'opacity-0'
+                          }`}
+                          sizes="(max-width: 1536px) 100vw, 1536px"
+                          priority
+                          onLoad={() => setLoadedGalleryImages(prev => new Set([...prev, selectedPhoto.id]))}
+                        />
+                      </>
+                    );
+                  })()}
                 </div>
                 {/* <div className="absolute bottom-0 left-0 right-0 bg-white/90 backdrop-blur-sm p-4 text-[1.4rem] text-dark">
                   <div className="flex justify-between items-center">
