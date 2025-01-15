@@ -7,28 +7,47 @@ import { Dialog, DialogPanel } from '@headlessui/react'
 import { api } from "~/trpc/react"
 import { ImageStatus } from '../shh/constants'
 
+// Add this type definition
+type Photo = {
+  id: string;
+  thumbnailSrc: string;
+  gallerySrc: string;
+  name: string;
+}
+
 export default function Photos() {
   const [selectedPhotoIndex, setSelectedPhotoIndex] = useState<number | null>(null);
   const [touchStart, setTouchStart] = useState<number | null>(null);
   const [touchEnd, setTouchEnd] = useState<number | null>(null);
   const [loadedThumbnails, setLoadedThumbnails] = useState<Set<string>>(new Set());
   const [loadedGalleryImages, setLoadedGalleryImages] = useState<Set<string>>(new Set());
+  const [isRandom, setIsRandom] = useState(false);
 
   // Fetch S3 photos
-  const { data: dbPhotos = [], isLoading: isLoadingPhotos } = api.photos.listPhotosWithUrls.useQuery({status: ImageStatus.READY});
-  
+  const { data: dbPhotos = [], isLoading: isLoadingPhotos } = api.photos.listPhotosWithUrls.useQuery(
+    {status: ImageStatus.READY, random: isRandom},
+    {
+      refetchOnWindowFocus: false,
+      refetchOnMount: false,
+    }
+  );
+
   // Convert to Photo objects
-  const photos: {
-    id: string;
-    thumbnailSrc: string;
-    gallerySrc: string;
-    name: string;
-  }[] = dbPhotos.map((photo) => ({
-    id: photo.pk,
-    thumbnailSrc: photo.thumbnailUrl ?? '',
-    gallerySrc: photo.galleryUrl ?? '',
-    name: photo.fullKey.split('/').pop() ?? photo.fullKey,
-  })).filter(photo => photo.thumbnailSrc && photo.gallerySrc);
+  const photos: Photo[] = dbPhotos
+    .filter((photo): photo is typeof photo & { thumbnailUrl: string; galleryUrl: string } => 
+      Boolean(photo.thumbnailUrl && photo.galleryUrl)
+    )
+    .map((photo) => ({
+      id: photo.pk,
+      thumbnailSrc: photo.thumbnailUrl,
+      gallerySrc: photo.galleryUrl,
+      name: photo.fullKey.split('/').pop() ?? photo.fullKey,
+    }));
+
+  const handleShuffle = useCallback(() => {
+    setSelectedPhotoIndex(null);
+    setIsRandom(prev => !prev);
+  }, []);
 
   const handleTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
     const touch = e.targetTouches[0];
@@ -87,7 +106,21 @@ export default function Photos() {
   return (
     <main className="min-h-screen bg-white p-8">
       <div className="max-w-[75%] mx-auto">
-        <Link href="/" className="text-[1.6rem] link-style mb-8 inline-block">&larr; back</Link>
+        <div className="flex flex-col gap-24 mb-8">
+          <Link href="/" className="text-[1.6rem] link-style inline-block">&larr; back</Link>
+          <button 
+            onClick={handleShuffle}
+            className={`
+              px-4 py-2 rounded-lg text-[1.6rem] w-fit transition-all
+              ${isRandom 
+                ? 'bg-gray-200 shadow-inner border border-gray-300' 
+                : 'border border-gray-300 hover:bg-gray-50'
+              }
+            `}
+          >
+            🔀
+          </button>
+        </div>
         
         {isLoadingPhotos ? (
           <div className="flex justify-center items-center min-h-[200px]">
@@ -98,7 +131,7 @@ export default function Photos() {
             no photos found
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8 mt-8">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-8 mt-8">
             {photos.map((photo, index) => (
               <div 
                 key={photo.id} 

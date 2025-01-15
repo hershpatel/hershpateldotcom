@@ -176,6 +176,7 @@ export const photosRouter = createTRPCRouter({
   listPhotosWithUrls: publicProcedure
     .input(z.object({
       status: z.nativeEnum(ImageStatus),
+      random: z.boolean().optional(),
     }))
     .output(z.array(z.object({
       pk: z.string(),
@@ -200,6 +201,7 @@ export const photosRouter = createTRPCRouter({
             status: true,
             original_created_at: true,
           },
+          orderBy: input.random ? (images, { sql }) => sql`random()` : undefined,
         });
 
         return photos.map(photo => ({
