@@ -2,12 +2,11 @@
 
 import Link from 'next/link'
 import Image from 'next/image'
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback, useEffect, useRef } from 'react'
 import { Dialog, DialogPanel } from '@headlessui/react'
 import { api } from "~/trpc/react"
 import { ImageStatus } from '../shh/constants'
 
-// Add this type definition
 type Photo = {
   id: string;
   thumbnailSrc: string;
@@ -30,6 +29,7 @@ export default function Photos() {
   const [isAscending, setIsAscending] = useState(false);
   const [selectedTags, setSelectedTags] = useState<Tag[]>([]);
   const [isTagDropdownOpen, setIsTagDropdownOpen] = useState(false);
+  const tagDropdownRef = useRef<HTMLDivElement>(null);
 
   // Fetch tags
   const { data: tags = [] } = api.tags.list.useQuery(undefined, {
@@ -149,13 +149,38 @@ export default function Photos() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [handleKeyDown]);
 
+  // Handle click outside tag dropdown
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (tagDropdownRef.current && !tagDropdownRef.current.contains(event.target as Node)) {
+        setIsTagDropdownOpen(false);
+      }
+    };
+
+    const handleEscapeKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && isTagDropdownOpen) {
+        setIsTagDropdownOpen(false);
+      }
+    };
+
+    if (isTagDropdownOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+      document.addEventListener('keydown', handleEscapeKey);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleEscapeKey);
+    };
+  }, [isTagDropdownOpen]);
+
   return (
     <main className="min-h-screen bg-white p-8">
       <div className="max-w-[75%] mx-auto">
         <div className="flex flex-col gap-8 mb-8">
           <Link href="/" className="text-[1.6rem] link-style inline-block">&larr; back</Link>
 
-          {!isLoadingPhotos && photos.length > 0 && (
+          {(isLoadingPhotos || photos.length > 0) && (
             <div className="flex flex-col gap-4">
               <div className="flex gap-4 items-center">
                 <button 
@@ -200,12 +225,12 @@ export default function Photos() {
                   🔀
                 </button>
 
-                <div className="relative">
+                <div className="relative" ref={tagDropdownRef}>
                   <button
                     onClick={() => setIsTagDropdownOpen(!isTagDropdownOpen)}
                     className={`
                       text-[2rem] transition-all w-fit
-                      ${selectedTags.length > 0
+                      ${selectedTags.length === tags.length
                         ? 'translate-y-[1px] opacity-60 shadow-inner' 
                         : 'hover:opacity-80 drop-shadow-md'
                       }
@@ -216,20 +241,25 @@ export default function Photos() {
                   </button>
                   {isTagDropdownOpen && (
                     <div className="absolute z-10 mt-1 w-72 overflow-auto rounded-md bg-white py-1 shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none text-[1.4rem]">
-                      {tags
-                        .filter(tag => !selectedTags.find(t => t.pk === tag.pk))
-                        .map((tag) => (
+                      {tags.map((tag) => {
+                        const isSelected = selectedTags.some(t => t.pk === tag.pk);
+                        return (
                           <button
                             key={tag.pk}
-                            className="w-full px-4 py-2 text-left hover:bg-blue-500 hover:text-white"
-                            onClick={() => {
-                              handleTagSelect(tag);
-                              setIsTagDropdownOpen(false);
-                            }}
+                            className={`
+                              w-full px-4 py-2 text-left
+                              ${isSelected 
+                                ? 'opacity-50 cursor-not-allowed'
+                                : 'hover:bg-blue-500 hover:text-white'
+                              }
+                            `}
+                            onClick={() => !isSelected && handleTagSelect(tag)}
+                            disabled={isSelected}
                           >
                             {tag.name}
                           </button>
-                        ))}
+                        );
+                      })}
                     </div>
                   )}
                 </div>
@@ -240,12 +270,12 @@ export default function Photos() {
                   {selectedTags.map((tag) => (
                     <span
                       key={tag.pk}
-                      className="inline-flex items-center gap-1 rounded-full bg-blue-100 px-3 py-1 text-[1.2rem] text-blue-700"
+                      className="inline-flex items-center gap-1 rounded-full bg-gray-100 px-3 py-1 text-[1.2rem] text-gray-700"
                     >
                       {tag.name}
                       <button
                         onClick={() => handleTagRemove(tag.pk)}
-                        className="ml-1 rounded-full hover:bg-blue-200 p-1"
+                        className="ml-1 rounded-full hover:bg-gray-200 p-1"
                       >
                         ×
                       </button>
