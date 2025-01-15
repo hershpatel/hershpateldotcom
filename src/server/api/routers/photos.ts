@@ -4,7 +4,7 @@ import { z } from "zod";
 import { env } from "~/env";
 import { createTRPCRouter, publicProcedure } from "~/server/api/trpc";
 import sharp from "sharp";
-import { images } from "~/server/db/schema";
+import { images, imageTags } from "~/server/db/schema";
 import { ImageStatus } from "~/app/shh/constants";
 import { eq, inArray } from "drizzle-orm";
 import Bluebird from "bluebird";
@@ -57,7 +57,6 @@ function getS3Client() {
 }
 const s3Client = getS3Client();
 
-// Combine into a single interface
 interface ImageMetadata {
   Make?: string;
   Model?: string;
@@ -161,55 +160,15 @@ export const photosRouter = createTRPCRouter({
   }),
 
   /*
-    List photos from the database
-  */
-  listPhotos: publicProcedure
-    .input(z.object({
-      status: z.nativeEnum(ImageStatus),
-    }))
-    .output(z.array(z.object({
-      pk: z.string(),
-      fullKey: z.string(),
-      thumbnailKey: z.string().nullable(),
-      galleryKey: z.string().nullable(),
-      status: z.nativeEnum(ImageStatus),
-      createdAt: z.date(),
-    })))
-    .query(async ({ input, ctx }) => {
-      try {
-        const photos = await ctx.db.query.images.findMany({
-          where: (images, { eq }) => eq(images.status, input.status),
-          columns: {
-            pk: true,
-            full_key: true,
-            thumbnail_key: true,
-            gallery_key: true,
-            status: true,
-            original_created_at: true,
-          },
-        });
-
-        return photos.map(photo => ({
-          pk: photo.pk,
-          fullKey: photo.full_key,
-          thumbnailKey: photo.thumbnail_key,
-          galleryKey: photo.gallery_key,
-          status: photo.status as ImageStatus,
-          createdAt: photo.original_created_at,
-        }));
-      } catch (error) {
-        console.error('Error listing photos:', error);
-        throw new Error('Failed to list photos from database');
-      }
-    }),
-
-  /*
     List photos with Cloudfront URLs
   */
   listPhotosWithUrls: publicProcedure
     .input(z.object({
-      status: z.nativeEnum(ImageStatus),
-      random: z.boolean().optional(),
+      status: z.nativeEnum(ImageStatus).default(ImageStatus.READY),
+      random: z.boolean().default(false),
+      tagPks: z.array(z.string()).optional(),
+      startDate: z.date().optional(),
+      endDate: z.date().optional(),
     }))
     .output(z.array(z.object({
       pk: z.string(),
@@ -224,8 +183,32 @@ export const photosRouter = createTRPCRouter({
     })))
     .query(async ({ input, ctx }) => {
       try {
-        const photos = await ctx.db.query.images.findMany({
-          where: (images, { eq }) => eq(images.status, input.status),
+        const query = ctx.db.query.images.findMany({
+          where: (images, { eq, and, exists, inArray, gte, lte }) => {
+            const conditions = [eq(images.status, input.status)];
+            
+            if (input.tagPks && input.tagPks.length > 0) {
+              conditions.push(
+                exists(
+                  ctx.db.select()
+                    .from(imageTags)
+                    .where(and(
+                      eq(imageTags.image_pk, images.pk),
+                      inArray(imageTags.tag_pk, input.tagPks)
+                    ))
+                )
+              );
+            }
+
+            if (input.startDate) {
+              conditions.push(gte(images.original_created_at, input.startDate));
+            }
+            if (input.endDate) {
+              conditions.push(lte(images.original_created_at, input.endDate));
+            }
+            
+            return and(...conditions);
+          },
           columns: {
             pk: true,
             full_key: true,
@@ -234,8 +217,10 @@ export const photosRouter = createTRPCRouter({
             status: true,
             original_created_at: true,
           },
-          orderBy: input.random ? (images, { sql }) => sql`random()` : undefined,
+          orderBy: input.random ? (images, { sql }) => sql`random()` : (images, { desc }) => [desc(images.original_created_at)],
         });
+
+        const photos = await query;
 
         return photos.map(photo => ({
           pk: photo.pk,
@@ -341,9 +326,9 @@ export const photosRouter = createTRPCRouter({
             camera_model: s3Metadata.model.trim(),
             original_created_at: s3Metadata.originalCreatedAt,
             iso: s3Metadata.iso.trim(),
-            focal_length: s3Metadata.focalLength.trim(),
-            exposure_time: s3Metadata.exposureTime.trim(),
-            f_number: s3Metadata.fNumber.trim(),
+            focal_length: s3Metadata.focalLength,
+            exposure_time: s3Metadata.exposureTime,
+            f_number: s3Metadata.fNumber,
             status: ImageStatus.READY,
           })
           .where(eq(images.full_key, input.fullKey))

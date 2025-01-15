@@ -1,0 +1,302 @@
+{
+  "id": "86f4c01e-42dc-4413-93cc-5004be24853b",
+  "prevId": "0d65b170-9d72-4095-9b5b-d151d7bdb51d",
+  "version": "7",
+  "dialect": "postgresql",
+  "tables": {
+    "public.hershpateldotcom_image_tags": {
+      "name": "hershpateldotcom_image_tags",
+      "schema": "",
+      "columns": {
+        "image_pk": {
+          "name": "image_pk",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "tag_pk": {
+          "name": "tag_pk",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "image_tags_image_idx": {
+          "name": "image_tags_image_idx",
+          "columns": [
+            {
+              "expression": "image_pk",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "image_tags_tag_idx": {
+          "name": "image_tags_tag_idx",
+          "columns": [
+            {
+              "expression": "tag_pk",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "hershpateldotcom_image_tags_image_pk_hershpateldotcom_images_pk_fk": {
+          "name": "hershpateldotcom_image_tags_image_pk_hershpateldotcom_images_pk_fk",
+          "tableFrom": "hershpateldotcom_image_tags",
+          "tableTo": "hershpateldotcom_images",
+          "columnsFrom": [
+            "image_pk"
+          ],
+          "columnsTo": [
+            "pk"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "hershpateldotcom_image_tags_tag_pk_hershpateldotcom_tags_pk_fk": {
+          "name": "hershpateldotcom_image_tags_tag_pk_hershpateldotcom_tags_pk_fk",
+          "tableFrom": "hershpateldotcom_image_tags",
+          "tableTo": "hershpateldotcom_tags",
+          "columnsFrom": [
+            "tag_pk"
+          ],
+          "columnsTo": [
+            "pk"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "hershpateldotcom_image_tags_image_pk_tag_pk_pk": {
+          "name": "hershpateldotcom_image_tags_image_pk_tag_pk_pk",
+          "columns": [
+            "image_pk",
+            "tag_pk"
+          ]
+        }
+      },
+      "uniqueConstraints": {}
+    },
+    "public.hershpateldotcom_images": {
+      "name": "hershpateldotcom_images",
+      "schema": "",
+      "columns": {
+        "pk": {
+          "name": "pk",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "status": {
+          "name": "status",
+          "type": "image_status",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'pending'"
+        },
+        "photo_name": {
+          "name": "photo_name",
+          "type": "varchar(256)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "full_key": {
+          "name": "full_key",
+          "type": "varchar(256)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "thumbnail_key": {
+          "name": "thumbnail_key",
+          "type": "varchar(256)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "gallery_key": {
+          "name": "gallery_key",
+          "type": "varchar(256)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "camera_make": {
+          "name": "camera_make",
+          "type": "varchar(256)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "camera_model": {
+          "name": "camera_model",
+          "type": "varchar(256)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "original_created_at": {
+          "name": "original_created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "f_number": {
+          "name": "f_number",
+          "type": "varchar(256)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "iso": {
+          "name": "iso",
+          "type": "varchar(256)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "focal_length": {
+          "name": "focal_length",
+          "type": "varchar(256)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "exposure_time": {
+          "name": "exposure_time",
+          "type": "varchar(256)",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "original_created_at_idx": {
+          "name": "original_created_at_idx",
+          "columns": [
+            {
+              "expression": "original_created_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "status_idx": {
+          "name": "status_idx",
+          "columns": [
+            {
+              "expression": "status",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "hershpateldotcom_images_photo_name_unique": {
+          "name": "hershpateldotcom_images_photo_name_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "photo_name"
+          ]
+        },
+        "hershpateldotcom_images_full_key_unique": {
+          "name": "hershpateldotcom_images_full_key_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "full_key"
+          ]
+        }
+      }
+    },
+    "public.hershpateldotcom_tags": {
+      "name": "hershpateldotcom_tags",
+      "schema": "",
+      "columns": {
+        "pk": {
+          "name": "pk",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "name": {
+          "name": "name",
+          "type": "varchar(50)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "description": {
+          "name": "description",
+          "type": "varchar(256)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "hershpateldotcom_tags_name_unique": {
+          "name": "hershpateldotcom_tags_name_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "name"
+          ]
+        }
+      }
+    }
+  },
+  "enums": {
+    "public.image_status": {
+      "name": "image_status",
+      "schema": "public",
+      "values": [
+        "pending",
+        "ready",
+        "disabled"
+      ]
+    }
+  },
+  "schemas": {},
+  "sequences": {},
+  "_meta": {
+    "columns": {},
+    "schemas": {},
+    "tables": {}
+  }
+}

@@ -1,6 +1,7 @@
 import { DeleteSection } from "./sections/DeleteSection";
 import { OptimizeSection } from "./sections/OptimizeSection";
 import { UploadSection } from "./sections/UploadSection";
+import { TagsSection } from "./sections/TagsSection";
 
 export type SectionId = string;
 
@@ -25,5 +26,10 @@ export const sections: Section[] = [
     id: 'delete',
     label: 'delete images',
     Component: DeleteSection
-  }
+  },
+  {
+    id: 'tags',
+    label: 'tags',
+    Component: TagsSection
+  },
 ];

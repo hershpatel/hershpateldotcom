@@ -8,6 +8,7 @@ import {
   varchar,
   uuid,
   pgEnum,
+  primaryKey,
 } from "drizzle-orm/pg-core";
 import { ImageStatus } from "~/app/shh/constants";
 
@@ -39,10 +40,40 @@ export const images = createTable(
     exposure_time: varchar("exposure_time", { length: 256 }),
   },
   (table) => ({
-    createdAtIdx: index("created_at_idx").on(table.original_created_at),
-    statusIdx: index("status_idx").on(table.status),
+    original_created_at_idx: index("original_created_at_idx").on(table.original_created_at),
+    status_idx: index("status_idx").on(table.status),
+  })
+);
+
+export const tags = createTable(
+  "tags",
+  {
+    pk: uuid("pk").primaryKey().defaultRandom(),
+    name: varchar("name", { length: 50 }).notNull().unique(),
+    description: varchar("description", { length: 256 }),
+    created_at: timestamp("created_at", { withTimezone: true }).defaultNow(),
+  }
+);
+
+export const imageTags = createTable(
+  "image_tags",
+  {
+    image_pk: uuid("image_pk")
+      .notNull()
+      .references(() => images.pk, { onDelete: "cascade" }),
+    tag_pk: uuid("tag_pk")
+      .notNull()
+      .references(() => tags.pk, { onDelete: "cascade" }),
+    created_at: timestamp("created_at", { withTimezone: true }).defaultNow(),
+  },
+  (table) => ({
+    pk: primaryKey({ columns: [table.image_pk, table.tag_pk] }),
+    image_idx: index("image_tags_image_idx").on(table.image_pk),
+    tag_idx: index("image_tags_tag_idx").on(table.tag_pk),
   })
 );
 
 // Update the type helper to use the enum
 export type Image = typeof images.$inferSelect;
+export type Tag = typeof tags.$inferSelect;
+export type ImageTag = typeof imageTags.$inferSelect;

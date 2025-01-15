@@ -28,7 +28,7 @@ export function OptimizeSection() {
   const [optimizationStatus, setOptimizationStatus] = useState<OptimizationStatus>({});
   const [isOptimizing, setIsOptimizing] = useState(false);
   
-  const { data: photos, isLoading, refetch } = api.photos.listPhotos.useQuery({
+  const { data: photos, isLoading, refetch } = api.photos.listPhotosWithUrls.useQuery({
     status: ImageStatus.PENDING
   });
 
