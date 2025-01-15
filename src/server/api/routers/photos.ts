@@ -1,4 +1,4 @@
-import { S3Client, PutObjectCommand, GetObjectCommand } from "@aws-sdk/client-s3";
+import { S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectsCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { z } from "zod";
 import { env } from "~/env";
@@ -6,7 +6,7 @@ import { createTRPCRouter, publicProcedure } from "~/server/api/trpc";
 import sharp from "sharp";
 import { images } from "~/server/db/schema";
 import { ImageStatus } from "~/app/shh/constants";
-import { eq } from "drizzle-orm";
+import { eq, inArray } from "drizzle-orm";
 import Promise from "bluebird";
 
 // Image processing configuration
@@ -355,6 +355,54 @@ export const photosRouter = createTRPCRouter({
           throw new Error(`Failed to optimize image: ${error.message}`);
         }
         throw new Error('Failed to optimize image: Unknown error');
+      }
+    }),
+
+  /*
+    Delete photos from S3 and database
+  */
+  deletePhotos: publicProcedure
+    .input(z.array(z.string()))  // Array of PKs
+    .mutation(async ({ input: pks, ctx }) => {
+      try {
+        // First get the photos from database to get their S3 keys
+        const photosToDelete = await ctx.db.query.images.findMany({
+          where: (images, { inArray }) => inArray(images.pk, pks),
+          columns: {
+            pk: true,
+            full_key: true,
+            thumbnail_key: true,
+            gallery_key: true,
+          },
+        });
+
+        // Collect all S3 keys to delete
+        const objectsToDelete = photosToDelete.flatMap(photo => {
+          const keys = [photo.full_key];
+          if (photo.thumbnail_key) keys.push(photo.thumbnail_key);
+          if (photo.gallery_key) keys.push(photo.gallery_key);
+          return keys;
+        });
+
+        // Delete from S3
+        if (objectsToDelete.length > 0) {
+          await s3Client.send(new DeleteObjectsCommand({
+            Bucket: bucketName,
+            Delete: {
+              Objects: objectsToDelete.map(Key => ({ Key })),
+              Quiet: true
+            }
+          }));
+        }
+
+        // Delete from database using inArray
+        await ctx.db.delete(images)
+          .where(inArray(images.pk, pks));
+
+        return { success: true };
+      } catch (error) {
+        console.error('Error deleting photos:', error);
+        throw new Error('Failed to delete photos');
       }
     }),
 });
