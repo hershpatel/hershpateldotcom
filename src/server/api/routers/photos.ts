@@ -169,6 +169,7 @@ export const photosRouter = createTRPCRouter({
       tagPks: z.array(z.string()).optional(),
       startDate: z.date().optional(),
       endDate: z.date().optional(),
+      ascending: z.boolean().default(false),
     }))
     .output(z.array(z.object({
       pk: z.string(),
@@ -217,7 +218,9 @@ export const photosRouter = createTRPCRouter({
             status: true,
             original_created_at: true,
           },
-          orderBy: input.random ? (images, { sql }) => sql`random()` : (images, { desc }) => [desc(images.original_created_at)],
+          orderBy: input.random 
+            ? (images, { sql }) => sql`random()` 
+            : (images, { desc, asc }) => [input.ascending ? asc(images.original_created_at) : desc(images.original_created_at)],
         });
 
         const photos = await query;

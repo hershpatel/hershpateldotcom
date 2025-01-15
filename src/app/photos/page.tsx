@@ -15,6 +15,11 @@ type Photo = {
   name: string;
 }
 
+type Tag = {
+  pk: string;
+  name: string;
+}
+
 export default function Photos() {
   const [selectedPhotoIndex, setSelectedPhotoIndex] = useState<number | null>(null);
   const [touchStart, setTouchStart] = useState<number | null>(null);
@@ -22,10 +27,24 @@ export default function Photos() {
   const [loadedThumbnails, setLoadedThumbnails] = useState<Set<string>>(new Set());
   const [loadedGalleryImages, setLoadedGalleryImages] = useState<Set<string>>(new Set());
   const [isRandom, setIsRandom] = useState(false);
+  const [isAscending, setIsAscending] = useState(false);
+  const [selectedTags, setSelectedTags] = useState<Tag[]>([]);
+  const [isTagDropdownOpen, setIsTagDropdownOpen] = useState(false);
+
+  // Fetch tags
+  const { data: tags = [] } = api.tags.list.useQuery(undefined, {
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
+  });
 
   // Fetch S3 photos
   const { data: dbPhotos = [], isLoading: isLoadingPhotos } = api.photos.listPhotosWithUrls.useQuery(
-    {status: ImageStatus.READY, random: isRandom},
+    {
+      status: ImageStatus.READY, 
+      random: isRandom,
+      tagPks: selectedTags.map(tag => tag.pk),
+      ascending: isAscending,
+    },
     {
       refetchOnWindowFocus: false,
       refetchOnMount: false,
@@ -47,7 +66,34 @@ export default function Photos() {
   const handleShuffle = useCallback(() => {
     setSelectedPhotoIndex(null);
     setIsRandom(prev => !prev);
+    if (!isRandom) {
+      setIsAscending(false);
+    }
+  }, [isRandom]);
+
+  const handleAscending = useCallback(() => {
+    setSelectedPhotoIndex(null);
+    setIsAscending(prev => !prev);
+    if (!isAscending) {
+      setIsRandom(false);
+    }
+  }, [isAscending]);
+
+  const handleDescending = useCallback(() => {
+    setSelectedPhotoIndex(null);
+    setIsRandom(false);
+    setIsAscending(false);
   }, []);
+
+  const handleTagSelect = (tag: Tag) => {
+    if (!selectedTags.find(t => t.pk === tag.pk)) {
+      setSelectedTags([...selectedTags, tag]);
+    }
+  };
+
+  const handleTagRemove = (tagPk: string) => {
+    setSelectedTags(selectedTags.filter(tag => tag.pk !== tagPk));
+  };
 
   const handleTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
     const touch = e.targetTouches[0];
@@ -106,20 +152,107 @@ export default function Photos() {
   return (
     <main className="min-h-screen bg-white p-8">
       <div className="max-w-[75%] mx-auto">
-        <div className="flex flex-col gap-24 mb-8">
+        <div className="flex flex-col gap-8 mb-8">
           <Link href="/" className="text-[1.6rem] link-style inline-block">&larr; back</Link>
-          <button 
-            onClick={handleShuffle}
-            className={`
-              text-[2rem] transition-all w-fit
-              ${isRandom 
-                ? 'translate-y-[1px] opacity-60 shadow-inner' 
-                : 'hover:opacity-80 drop-shadow-md'
-              }
-            `}
-          >
-            🔀
-          </button>
+
+          <div className="flex flex-col gap-4">
+            <div className="flex gap-4 items-center">
+              <button 
+                onClick={handleDescending}
+                className={`
+                  text-[2rem] transition-all w-fit
+                  ${!isRandom && !isAscending
+                    ? 'translate-y-[1px] opacity-60 shadow-inner' 
+                    : 'hover:opacity-80 drop-shadow-md'
+                  }
+                `}
+                title="show newest first"
+              >
+                ⬇️
+              </button>
+
+              <button 
+                onClick={handleAscending}
+                className={`
+                  text-[2rem] transition-all w-fit
+                  ${isAscending 
+                    ? 'translate-y-[1px] opacity-60 shadow-inner' 
+                    : 'hover:opacity-80 drop-shadow-md'
+                  }
+                `}
+                title="show oldest first"
+              >
+                ⬆️
+              </button>
+
+              <button 
+                onClick={handleShuffle}
+                className={`
+                  text-[2rem] transition-all w-fit
+                  ${isRandom 
+                    ? 'translate-y-[1px] opacity-60 shadow-inner' 
+                    : 'hover:opacity-80 drop-shadow-md'
+                  }
+                `}
+                title="show in random order"
+              >
+                🔀
+              </button>
+
+              <div className="relative">
+                <button
+                  onClick={() => setIsTagDropdownOpen(!isTagDropdownOpen)}
+                  className={`
+                    text-[2rem] transition-all w-fit
+                    ${selectedTags.length > 0
+                      ? 'translate-y-[1px] opacity-60 shadow-inner' 
+                      : 'hover:opacity-80 drop-shadow-md'
+                    }
+                  `}
+                  title="filter by tags"
+                >
+                  🏷️
+                </button>
+                {isTagDropdownOpen && (
+                  <div className="absolute z-10 mt-1 w-72 overflow-auto rounded-md bg-white py-1 shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none text-[1.4rem]">
+                    {tags
+                      .filter(tag => !selectedTags.find(t => t.pk === tag.pk))
+                      .map((tag) => (
+                        <button
+                          key={tag.pk}
+                          className="w-full px-4 py-2 text-left hover:bg-blue-500 hover:text-white"
+                          onClick={() => {
+                            handleTagSelect(tag);
+                            setIsTagDropdownOpen(false);
+                          }}
+                        >
+                          {tag.name}
+                        </button>
+                      ))}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {selectedTags.length > 0 && (
+              <div className="flex flex-wrap gap-2">
+                {selectedTags.map((tag) => (
+                  <span
+                    key={tag.pk}
+                    className="inline-flex items-center gap-1 rounded-full bg-blue-100 px-3 py-1 text-[1.2rem] text-blue-700"
+                  >
+                    {tag.name}
+                    <button
+                      onClick={() => handleTagRemove(tag.pk)}
+                      className="ml-1 rounded-full hover:bg-blue-200 p-1"
+                    >
+                      ×
+                    </button>
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
         
         {isLoadingPhotos ? (
