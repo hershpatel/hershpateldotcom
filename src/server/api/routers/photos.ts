@@ -57,43 +57,32 @@ function getS3Client() {
 }
 const s3Client = getS3Client();
 
+// Combine into a single interface
 interface ImageMetadata {
-  make?: string;
-  model?: string;
-  originalDateTime?: Date;
-  fNumber?: number;
-  iso?: number;
-  focalLength?: number;
-  exposureTime?: number;
+  Make?: string;
+  Model?: string;
+  DateTimeOriginal?: Date;
+  FNumber?: number;
+  ISO?: number;
+  FocalLength?: number;
+  ExposureTime?: number;
 }
 
 const extractMetadata = async (imageBuffer: Uint8Array): Promise<ImageMetadata> => {
   const metadata = await sharp(imageBuffer).metadata();
-  let result: ImageMetadata = {};
 
-  if (metadata.exif) {
-    try {
-      const exifData = await exifr.parse(imageBuffer, {
-        pick: ['Make', 'Model', 'DateTimeOriginal', 'FNumber', 'ISO', 'FocalLength', 'ExposureTime']
-      });
-      
-      if (exifData) {
-        if (exifData.Make) result.make = exifData.Make.trim();
-        if (exifData.Model) result.model = exifData.Model.trim();
-        if (exifData.DateTimeOriginal) {
-          result.originalDateTime = exifData.DateTimeOriginal;
-        }
-        if (exifData.ISO) result.iso = exifData.ISO;
-        if (exifData.FocalLength) result.focalLength = exifData.FocalLength;
-        if (exifData.ExposureTime) result.exposureTime = exifData.ExposureTime;
-        if (exifData.FNumber) result.fNumber = exifData.FNumber;
-      }
-    } catch (exifError) {
-      console.error('Error parsing EXIF data:', exifError);
-    }
+  if (!metadata.exif) {
+    return {};
   }
 
-  return result;
+  try {
+    return await exifr.parse(imageBuffer, {
+      pick: ['Make', 'Model', 'DateTimeOriginal', 'FNumber', 'ISO', 'FocalLength', 'ExposureTime']
+    }) as ImageMetadata;
+  } catch (exifError) {
+    console.error('Error parsing EXIF data:', exifError);
+    return {};
+  }
 };
 
 export const photosRouter = createTRPCRouter({
@@ -293,13 +282,13 @@ export const photosRouter = createTRPCRouter({
         const imageBuffer = await originalImage.Body.transformToByteArray();
         const metadata = await extractMetadata(imageBuffer);
         const s3Metadata = {
-          make: metadata.make ?? '',
-          model: metadata.model ?? '',
-          originalCreatedAt: metadata.originalDateTime ?? new Date(),
-          iso: metadata.iso?.toString() ?? '',
-          focalLength: metadata.focalLength?.toString() ?? '',
-          exposureTime: metadata.exposureTime?.toString() ?? '',
-          fNumber: metadata.fNumber?.toString() ?? '',
+          make: metadata.Make ?? '',
+          model: metadata.Model ?? '',
+          originalCreatedAt: metadata.DateTimeOriginal ?? new Date(),
+          iso: metadata.ISO?.toString() ?? '',
+          focalLength: metadata.FocalLength?.toString() ?? '',
+          exposureTime: metadata.ExposureTime?.toString() ?? '',
+          fNumber: metadata.FNumber?.toString() ?? '',
         };
 
         // Generate thumbnail (low quality)
@@ -348,13 +337,13 @@ export const photosRouter = createTRPCRouter({
           .set({
             thumbnail_key: thumbnailKey,
             gallery_key: galleryKey,
-            camera_make: s3Metadata.make,
-            camera_model: s3Metadata.model,
+            camera_make: s3Metadata.make.trim(),
+            camera_model: s3Metadata.model.trim(),
             original_created_at: s3Metadata.originalCreatedAt,
-            iso: s3Metadata.iso,
-            focal_length: s3Metadata.focalLength,
-            exposure_time: s3Metadata.exposureTime,
-            f_number: s3Metadata.fNumber,
+            iso: s3Metadata.iso.trim(),
+            focal_length: s3Metadata.focalLength.trim(),
+            exposure_time: s3Metadata.exposureTime.trim(),
+            f_number: s3Metadata.fNumber.trim(),
             status: ImageStatus.READY,
           })
           .where(eq(images.full_key, input.fullKey))
