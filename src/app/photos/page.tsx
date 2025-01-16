@@ -314,18 +314,21 @@ function PhotosContent() {
                   <div className="relative" ref={tagDropdownRef}>
                     <button
                       onClick={() => setIsTagDropdownOpen(!isTagDropdownOpen)}
+                      disabled={tags.length === 0}
                       className={`
                         text-[2.5rem] sm:text-[2.5rem] transition-all w-fit
-                        ${selectedTags.length === tags.length
-                          ? 'translate-y-[1px] opacity-60 shadow-inner' 
-                          : 'hover:opacity-80 drop-shadow-md'
+                        ${tags.length === 0 
+                          ? 'opacity-50 cursor-not-allowed'
+                          : selectedTags.length === tags.length
+                            ? 'translate-y-[1px] opacity-60 shadow-inner' 
+                            : 'hover:opacity-80 drop-shadow-md'
                         }
                       `}
-                      title="filter by tags"
+                      title={tags.length === 0 ? "no tags available" : "filter by tags"}
                     >
                       🏷️
                     </button>
-                    {isTagDropdownOpen && (
+                    {isTagDropdownOpen && tags.length > 0 && (
                       <div className="absolute z-10 mt-1 w-72 overflow-auto rounded-md bg-white py-1 shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none text-[1.4rem]">
                         {tags.map((tag) => {
                           const isSelected = selectedTags.some(t => t.pk === tag.pk);

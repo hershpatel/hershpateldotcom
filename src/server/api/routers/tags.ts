@@ -19,6 +19,20 @@ export const tagsRouter = createTRPCRouter({
       return tag;
     }),
 
+  rename: publicProcedure
+    .input(z.object({
+      pk: z.string().uuid(),
+      name: z.string().min(1).max(50),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const [updatedTag] = await ctx.db
+        .update(tags)
+        .set({ name: input.name })
+        .where(eq(tags.pk, input.pk))
+        .returning();
+      return updatedTag;
+    }),
+
   delete: publicProcedure
     .input(z.object({ pk: z.string().uuid() }))
     .mutation(async ({ ctx, input }) => {

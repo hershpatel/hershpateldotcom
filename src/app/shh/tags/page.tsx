@@ -12,6 +12,7 @@ export default function TagsPage() {
     const [selectedPhotosToAdd, setSelectedPhotosToAdd] = useState<Set<string>>(new Set());
     const [selectedPhotosToRemove, setSelectedPhotosToRemove] = useState<Set<string>>(new Set());
     const [loadedImages, setLoadedImages] = useState<Set<string>>(new Set());
+    const [tagBeingRenamed, setTagBeingRenamed] = useState<{ pk: string; name: string } | null>(null);
     const [dateRange, setDateRange] = useState<{
       startDate: string | null;
       endDate: string | null;
@@ -70,6 +71,14 @@ export default function TagsPage() {
       onSuccess: () => {
         setSelectedPhotosToRemove(new Set());
         void refetchPhotosWithTag();
+      },
+    });
+  
+    // Rename tag mutation
+    const renameMutation = api.tags.rename.useMutation({
+      onSuccess: () => {
+        setTagBeingRenamed(null);
+        void refetchTags();
       },
     });
   
@@ -132,6 +141,21 @@ export default function TagsPage() {
       }
     };
   
+    const handleRenameTag = async (e: React.FormEvent) => {
+      e.preventDefault();
+      if (!tagBeingRenamed || !tagBeingRenamed.name.trim()) return;
+
+      try {
+        await renameMutation.mutateAsync({
+          pk: tagBeingRenamed.pk,
+          name: tagBeingRenamed.name.trim(),
+        });
+      } catch (error) {
+        alert('Failed to rename tag. Please try again.');
+        console.error('Tag rename error:', error);
+      }
+    };
+  
     // Filter photos that don't have the selected tag
     const photosWithoutTag = photos.filter(photo => !photosWithTag.includes(photo.pk));
     // Filter photos that have the selected tag
@@ -178,25 +202,78 @@ export default function TagsPage() {
               {tags.map((tag) => (
                 <div
                   key={tag.pk}
-                  onClick={() => setSelectedTagPk(tag.pk)}
+                  onClick={() => {
+                    if (tagBeingRenamed?.pk !== tag.pk) {
+                      setSelectedTagPk(tag.pk);
+                    }
+                  }}
                   className={`p-4 border rounded-lg bg-white shadow-sm space-y-2 cursor-pointer transition-all ${
                     selectedTagPk === tag.pk ? 'ring-2 ring-blue-500 scale-[0.98]' : 'hover:border-gray-400'
                   }`}
                 >
                   <div className="flex justify-between items-start">
-                    <div>
-                      <h4 className="font-medium">{tag.name}</h4>
+                    <div className="flex-1">
+                      {tagBeingRenamed?.pk === tag.pk ? (
+                        <form onSubmit={handleRenameTag} className="flex gap-2">
+                          <input
+                            type="text"
+                            value={tagBeingRenamed.name}
+                            onChange={(e) => setTagBeingRenamed({ ...tagBeingRenamed, name: e.target.value })}
+                            onClick={(e) => e.stopPropagation()}
+                            className="w-full px-2 py-1 text-base border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            maxLength={50}
+                            autoFocus
+                          />
+                          <button
+                            type="submit"
+                            onClick={(e) => e.stopPropagation()}
+                            className="text-blue-500 hover:text-blue-600 focus:outline-none text-[2rem]"
+                            title="Save"
+                          >
+                            ✓
+                          </button>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setTagBeingRenamed(null);
+                            }}
+                            className="text-gray-500 hover:text-gray-600 focus:outline-none text-[2rem]"
+                            title="Cancel"
+                          >
+                            ×
+                          </button>
+                        </form>
+                      ) : (
+                        <h4 className="font-medium">{tag.name}</h4>
+                      )}
                     </div>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        void handleDeleteTag(tag.pk, tag.name);
-                      }}
-                      className="text-red-500 hover:text-red-600 focus:outline-none"
-                      title="Delete tag"
-                    >
-                      ❌
-                    </button>
+                    <div className="flex gap-2">
+                      {tagBeingRenamed?.pk !== tag.pk && (
+                        <>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setTagBeingRenamed({ pk: tag.pk, name: tag.name });
+                            }}
+                            className="text-blue-500 hover:text-blue-600 focus:outline-none text-[2rem]"
+                            title="Rename tag"
+                          >
+                            ✎
+                          </button>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              void handleDeleteTag(tag.pk, tag.name);
+                            }}
+                            className="text-red-500 hover:text-red-600 focus:outline-none"
+                            title="Delete tag"
+                          >
+                            ❌
+                          </button>
+                        </>
+                      )}
+                    </div>
                   </div>
                 </div>
               ))}
