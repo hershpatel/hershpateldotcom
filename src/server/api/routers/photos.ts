@@ -4,9 +4,9 @@ import { z } from "zod";
 import { env } from "~/env";
 import { createTRPCRouter, publicProcedure } from "~/server/api/trpc";
 import sharp from "sharp";
-import { images, imageTags } from "~/server/db/schema";
+import { images, imageTags, tags } from "~/server/db/schema";
 import { ImageStatus } from "~/app/shh/constants";
-import { eq, inArray } from "drizzle-orm";
+import { eq, inArray, and } from "drizzle-orm";
 import Bluebird from "bluebird";
 import exifr from 'exifr';
 
@@ -170,6 +170,7 @@ export const photosRouter = createTRPCRouter({
       startDate: z.date().optional(),
       endDate: z.date().optional(),
       ascending: z.boolean().default(false),
+      includeTags: z.boolean().default(false),
     }))
     .output(z.array(z.object({
       pk: z.string(),
@@ -181,10 +182,15 @@ export const photosRouter = createTRPCRouter({
       thumbnailUrl: z.string().nullable(),
       galleryUrl: z.string().nullable(),
       fullUrl: z.string(),
+      tags: z.array(z.object({
+        pk: z.string(),
+        name: z.string(),
+      })).optional(),
     })))
     .query(async ({ input, ctx }) => {
       try {
-        const query = ctx.db.query.images.findMany({
+        // First get all photos
+        const photos = await ctx.db.query.images.findMany({
           where: (images, { eq, and, exists, inArray, gte, lte }) => {
             const conditions = [eq(images.status, input.status)];
             
@@ -223,8 +229,29 @@ export const photosRouter = createTRPCRouter({
             : (images, { desc, asc }) => [input.ascending ? asc(images.original_created_at) : desc(images.original_created_at)],
         });
 
-        const photos = await query;
+        let tagsByPhotoPk = new Map<string, Array<{ pk: string; name: string; }>>();
+        
+        if (input.includeTags) {
+          // Then get tags for all photos in a single query
+          const photoTags = await ctx.db.select({
+            imagePk: imageTags.image_pk,
+            tagPk: tags.pk,
+            tagName: tags.name,
+          })
+          .from(imageTags)
+          .innerJoin(tags, eq(tags.pk, imageTags.tag_pk))
+          .where(inArray(imageTags.image_pk, photos.map(p => p.pk)));
 
+          // Create a map of photo pk to tags for efficient lookup
+          for (const { imagePk, tagPk, tagName } of photoTags) {
+            if (!tagsByPhotoPk.has(imagePk)) {
+              tagsByPhotoPk.set(imagePk, []);
+            }
+            tagsByPhotoPk.get(imagePk)?.push({ pk: tagPk, name: tagName });
+          }
+        }
+
+        // Map photos with their tags
         return photos.map(photo => ({
           pk: photo.pk,
           fullKey: photo.full_key,
@@ -235,6 +262,7 @@ export const photosRouter = createTRPCRouter({
           thumbnailUrl: photo.thumbnail_key ? `${env.CLOUDFRONT_URL}/${photo.thumbnail_key}` : null,
           galleryUrl: photo.gallery_key ? `${env.CLOUDFRONT_URL}/${photo.gallery_key}` : null,
           fullUrl: `${env.CLOUDFRONT_URL}/${photo.full_key}`,
+          ...(input.includeTags && { tags: tagsByPhotoPk.get(photo.pk) ?? [] }),
         }));
       } catch (error) {
         console.error('Error listing photos with URLs:', error);
@@ -401,6 +429,86 @@ export const photosRouter = createTRPCRouter({
       } catch (error) {
         console.error('Error deleting photos:', error);
         throw new Error('Failed to delete photos');
+      }
+    }),
+
+  /*
+    List all photos with their tags, without filtering
+  */
+  listAllPhotosWithTags: publicProcedure
+    .input(z.object({
+      status: z.nativeEnum(ImageStatus).default(ImageStatus.READY),
+      random: z.boolean().default(false),
+      ascending: z.boolean().default(false),
+    }))
+    .output(z.array(z.object({
+      pk: z.string(),
+      fullKey: z.string(),
+      thumbnailKey: z.string().nullable(),
+      galleryKey: z.string().nullable(),
+      status: z.nativeEnum(ImageStatus),
+      createdAt: z.date(),
+      thumbnailUrl: z.string().nullable(),
+      galleryUrl: z.string().nullable(),
+      fullUrl: z.string(),
+      tags: z.array(z.object({
+        pk: z.string(),
+        name: z.string(),
+      })),
+    })))
+    .query(async ({ input, ctx }) => {
+      try {
+        // Get all photos with just status filter
+        const photos = await ctx.db.query.images.findMany({
+          where: eq(images.status, input.status),
+          columns: {
+            pk: true,
+            full_key: true,
+            thumbnail_key: true,
+            gallery_key: true,
+            status: true,
+            original_created_at: true,
+          },
+          orderBy: input.random 
+            ? (images, { sql }) => sql`random()` 
+            : (images, { desc, asc }) => [input.ascending ? asc(images.original_created_at) : desc(images.original_created_at)],
+        });
+
+        // Get tags for all photos in a single query
+        const photoTags = await ctx.db.select({
+          imagePk: imageTags.image_pk,
+          tagPk: tags.pk,
+          tagName: tags.name,
+        })
+        .from(imageTags)
+        .innerJoin(tags, eq(tags.pk, imageTags.tag_pk))
+        .where(inArray(imageTags.image_pk, photos.map(p => p.pk)));
+
+        // Create a map of photo pk to tags for efficient lookup
+        const tagsByPhotoPk = new Map<string, Array<{ pk: string; name: string; }>>();
+        for (const { imagePk, tagPk, tagName } of photoTags) {
+          if (!tagsByPhotoPk.has(imagePk)) {
+            tagsByPhotoPk.set(imagePk, []);
+          }
+          tagsByPhotoPk.get(imagePk)?.push({ pk: tagPk, name: tagName });
+        }
+
+        // Map photos with their tags
+        return photos.map(photo => ({
+          pk: photo.pk,
+          fullKey: photo.full_key,
+          thumbnailKey: photo.thumbnail_key,
+          galleryKey: photo.gallery_key,
+          status: photo.status as ImageStatus,
+          createdAt: photo.original_created_at,
+          thumbnailUrl: photo.thumbnail_key ? `${env.CLOUDFRONT_URL}/${photo.thumbnail_key}` : null,
+          galleryUrl: photo.gallery_key ? `${env.CLOUDFRONT_URL}/${photo.gallery_key}` : null,
+          fullUrl: `${env.CLOUDFRONT_URL}/${photo.full_key}`,
+          tags: tagsByPhotoPk.get(photo.pk) ?? [],
+        }));
+      } catch (error) {
+        console.error('Error listing all photos with tags:', error);
+        throw new Error('Failed to list photos from database');
       }
     }),
 });
