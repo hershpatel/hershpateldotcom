@@ -74,6 +74,13 @@ function PhotosContent() {
     }
   );
 
+  // Redirect if photo ID doesn't exist
+  useEffect(() => {
+    if (!isLoadingPhotos && photoId && !dbPhotos.some(photo => photo.pk === photoId)) {
+      router.replace('/photos');
+    }
+  }, [isLoadingPhotos, photoId, dbPhotos, router]);
+
   // Convert to Photo objects and find selected photo index
   const photos: Photo[] = dbPhotos
     .filter((photo): photo is typeof photo & { thumbnailUrl: string; galleryUrl: string } => 
