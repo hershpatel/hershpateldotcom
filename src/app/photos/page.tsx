@@ -243,7 +243,7 @@ function PhotosContent() {
 
   return (
     <main className="min-h-screen bg-white p-8">
-      <div className="max-w-[75%] mx-auto">
+      <div className="max-w-[95%] sm:max-w-[85%] md:max-w-[75%] mx-auto">
         <div className="flex flex-col gap-8 mb-8">
           <Link href="/" className="text-[1.6rem] link-style inline-block">&larr; back</Link>
 
@@ -253,7 +253,7 @@ function PhotosContent() {
                 <button 
                   onClick={() => updateUrlParams({ sort: 'newest' })}
                   className={`
-                    text-[2rem] transition-all w-fit
+                    text-[2.5rem] sm:text-[2.5rem] transition-all w-fit
                     ${!isRandom && !isAscending
                       ? 'translate-y-[1px] opacity-60 shadow-inner' 
                       : 'hover:opacity-80 drop-shadow-md'
@@ -267,7 +267,7 @@ function PhotosContent() {
                 <button 
                   onClick={() => updateUrlParams({ sort: 'oldest' })}
                   className={`
-                    text-[2rem] transition-all w-fit
+                    text-[2.5rem] sm:text-[2.5rem] transition-all w-fit
                     ${isAscending 
                       ? 'translate-y-[1px] opacity-60 shadow-inner' 
                       : 'hover:opacity-80 drop-shadow-md'
@@ -281,7 +281,7 @@ function PhotosContent() {
                 <button 
                   onClick={() => updateUrlParams({ sort: isRandom ? '' : 'random' })}
                   className={`
-                    text-[2rem] transition-all w-fit
+                    text-[2.5rem] sm:text-[2.5rem] transition-all w-fit
                     ${isRandom 
                       ? 'translate-y-[1px] opacity-60 shadow-inner' 
                       : 'hover:opacity-80 drop-shadow-md'
@@ -296,7 +296,7 @@ function PhotosContent() {
                   <button
                     onClick={() => setIsTagDropdownOpen(!isTagDropdownOpen)}
                     className={`
-                      text-[2rem] transition-all w-fit
+                      text-[2.5rem] sm:text-[2.5rem] transition-all w-fit
                       ${selectedTags.length === tags.length
                         ? 'translate-y-[1px] opacity-60 shadow-inner' 
                         : 'hover:opacity-80 drop-shadow-md'
@@ -401,11 +401,28 @@ function PhotosContent() {
         <div className="fixed inset-0 bg-black/80" aria-hidden="true" />
         
         <div className="fixed inset-0 flex items-center justify-center p-4">
+          <div 
+            className="fixed inset-0" 
+            onClick={handleCloseModal}
+            onTouchEnd={(e) => {
+              e.preventDefault();
+              handleCloseModal();
+            }}
+          />
           <DialogPanel
-            className="w-full max-w-6xl mx-auto px-16 relative"
-            onTouchStart={handleTouchStart}
-            onTouchMove={handleTouchMove}
-            onTouchEnd={handleTouchEnd}
+            className="w-full max-w-6xl mx-auto px-16 relative border-2 border-red-500"
+            onTouchStart={(e) => {
+              e.stopPropagation();
+              handleTouchStart(e);
+            }}
+            onTouchMove={(e) => {
+              e.stopPropagation();
+              handleTouchMove(e);
+            }}
+            onTouchEnd={(e) => {
+              e.stopPropagation();
+              handleTouchEnd();
+            }}
           >
             {selectedPhotoIndex !== null && photos[selectedPhotoIndex] && (
               <div className="relative flex justify-center items-center">
