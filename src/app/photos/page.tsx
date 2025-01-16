@@ -180,7 +180,7 @@ export default function Photos() {
         <div className="flex flex-col gap-8 mb-8">
           <Link href="/" className="text-[1.6rem] link-style inline-block">&larr; back</Link>
 
-          {(isLoadingPhotos || photos.length > 0) && (
+          {(isLoadingPhotos || tags.length > 0) && (
             <div className="flex flex-col gap-4">
               <div className="flex gap-4 items-center">
                 <button 
@@ -293,7 +293,9 @@ export default function Photos() {
           </div>
         ) : photos.length === 0 ? (
           <div className="flex items-center min-h-[200px] text-light text-[1.6rem]">
-            no photos found
+            {selectedTags.length > 0 
+              ? `no photos with ${selectedTags.map(t => t.name).join(', ')}` 
+              : 'no photos found'}
           </div>
         ) : (
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-8 mt-8">
