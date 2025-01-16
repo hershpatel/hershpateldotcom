@@ -36,7 +36,7 @@ export default function UploadPage() {
       onDrop,
       multiple: true,
       accept: {
-        'image/*': ['.jpeg', '.jpg', '.png', '.gif', '.webp']
+        'image/*': ['.jpeg', '.jpg', '.png', '.gif', '.webp', '.heic', '.heif']
       },
       maxSize: 30 * 1024 * 1024, // 30MB
       maxFiles: 50,
