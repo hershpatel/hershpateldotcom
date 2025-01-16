@@ -13,7 +13,7 @@ jobs:
     steps:
       - name: Check website health
         run: |
-          response=$(curl -s -o /dev/null -w "%{http_code}" --max-time 5 https://hershpatel.com/photos)
+          response=$(curl -L -s -o /dev/null -w "%{http_code}" --max-time 5 https://hershpatel.com/photos)
           if [ "$response" != "200" ]; then
             echo "Website returned HTTP status $response"
             exit 1
