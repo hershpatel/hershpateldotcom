@@ -410,7 +410,7 @@ function PhotosContent() {
             }}
           />
           <DialogPanel
-            className="relative border-2 border-red-500"
+            className="relative border-2 border-white"
             onTouchStart={(e) => {
               e.stopPropagation();
               handleTouchStart(e);
