@@ -128,7 +128,7 @@ function PhotosContent() {
       }
     }
     
-    router.push(`/photos?${params.toString()}`);
+    router.replace(`/photos?${params.toString()}`, { scroll: false });
   }, [searchParams, router]);
 
   // Tag handlers
