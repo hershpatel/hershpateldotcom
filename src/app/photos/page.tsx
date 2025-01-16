@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import Image from 'next/image'
-import { useState, useCallback, useEffect, useRef } from 'react'
+import { useState, useCallback, useEffect, useRef, Suspense } from 'react'
 import { Dialog, DialogPanel } from '@headlessui/react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { api } from "~/trpc/react"
@@ -20,7 +20,7 @@ type Tag = {
   name: string;
 }
 
-export default function Photos() {
+function PhotosContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   
@@ -44,7 +44,6 @@ export default function Photos() {
   // Get URL parameters
   const isRandom = searchParams.get('sort') === 'random';
   const isAscending = searchParams.get('sort') === 'oldest';
-  const isNewest = searchParams.get('sort') === 'newest';
   const urlTags = searchParams.get('tags')?.split(',').filter(Boolean) ?? [];
   const photoId = searchParams.get('photo');
 
@@ -118,19 +117,6 @@ export default function Photos() {
     
     router.push(`/photos?${params.toString()}`);
   }, [searchParams, router]);
-
-  // Sorting handlers
-  const handleShuffle = useCallback(() => {
-    updateUrlParams({ sort: isRandom ? '' : 'random', photo: null });
-  }, [isRandom, updateUrlParams]);
-
-  const handleAscending = useCallback(() => {
-    updateUrlParams({ sort: isAscending ? '' : 'oldest', photo: null });
-  }, [isAscending, updateUrlParams]);
-
-  const handleDescending = useCallback(() => {
-    updateUrlParams({ sort: 'newest', photo: null });
-  }, [updateUrlParams]);
 
   // Tag handlers
   const handleTagSelect = (tag: Tag) => {
@@ -494,4 +480,24 @@ export default function Photos() {
       </Dialog>
     </main>
   )
+}
+
+function LoadingPhotos() {
+  return (
+    <main className="min-h-screen bg-white p-8">
+      <div className="max-w-[75%] mx-auto">
+        <div className="flex justify-center items-center min-h-[200px]">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-gray-900"></div>
+        </div>
+      </div>
+    </main>
+  );
+}
+
+export default function Photos() {
+  return (
+    <Suspense fallback={<LoadingPhotos />}>
+      <PhotosContent />
+    </Suspense>
+  );
 }
