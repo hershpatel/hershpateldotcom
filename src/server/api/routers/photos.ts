@@ -136,13 +136,13 @@ export const photosRouter = createTRPCRouter({
         photo_name: input.photoName,
         full_key: input.fullKey,
         original_created_at: new Date(),
-        status: ImageStatus.PENDING,
+        status: ImageStatus.PENDING.toString(),
       })
       .onConflictDoUpdate({
         target: images.full_key,
         set: {
           original_created_at: new Date(),
-          status: ImageStatus.PENDING,
+          status: ImageStatus.PENDING.toString(),
           camera_make: undefined,
           camera_model: undefined,
           iso: undefined,
@@ -366,7 +366,7 @@ export const photosRouter = createTRPCRouter({
             focal_length: s3Metadata.focalLength,
             exposure_time: s3Metadata.exposureTime,
             f_number: s3Metadata.fNumber,
-            status: ImageStatus.READY,
+            status: ImageStatus.READY.toString(),
           })
           .where(eq(images.full_key, input.fullKey))
           .returning({ pk: images.pk });
@@ -383,6 +383,14 @@ export const photosRouter = createTRPCRouter({
         };
       } catch (error) {
         console.error('Error optimizing image:', error);
+        // Update status to error in database
+        await ctx.db
+          .update(images)
+          .set({
+            status: ImageStatus.ERROR.toString(),
+          })
+          .where(eq(images.full_key, input.fullKey));
+
         if (error instanceof Error) {
           throw new Error(`Failed to optimize image: ${error.message}`);
         }

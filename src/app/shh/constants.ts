@@ -7,5 +7,6 @@ export enum ImageType {
 export enum ImageStatus {
     PENDING = 'pending',
     READY = 'ready',
-    DISABLED = 'disabled'
+    DISABLED = 'disabled',
+    ERROR = 'error'
 }

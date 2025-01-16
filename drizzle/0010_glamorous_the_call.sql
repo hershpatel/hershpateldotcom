@@ -1,0 +1,1 @@
+ALTER TABLE "hershpateldotcom_images" ALTER COLUMN "status" SET DATA TYPE varchar(20);

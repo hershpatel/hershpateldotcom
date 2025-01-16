@@ -55,6 +55,41 @@ export function TRPCReactProvider(props: { children: React.ReactNode }) {
             headers.set("x-trpc-source", "nextjs-react");
             return headers;
           },
+          fetch: async (url, options) => {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+            
+            const fetchWithRetry = async (attempt = 0): Promise<Response> => {
+              try {
+                // Use the existing signal if provided, otherwise use our timeout signal
+                const signal = options?.signal ?? controller.signal;
+
+                const response = await fetch(url, {
+                  ...options,
+                  signal,
+                });
+
+                // If the response is not ok, throw an error to trigger retry
+                if (!response.ok) {
+                  throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response;
+              } catch (error) {
+                if (attempt < 2 && !controller.signal.aborted) { // Changed from 5 to 2 (allowing 3 total attempts)
+                  const delay = Math.min(1000 * Math.pow(2, attempt), 30000); // Cap at 30 seconds
+                  await new Promise(resolve => setTimeout(resolve, delay));
+                  return fetchWithRetry(attempt + 1);
+                }
+                throw error;
+              }
+            };
+
+            try {
+              return await fetchWithRetry();
+            } finally {
+              clearTimeout(timeoutId);
+            }
+          }
         }),
       ],
     })

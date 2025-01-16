@@ -5,9 +5,8 @@ import {
   index,
   pgTableCreator,
   timestamp,
-  varchar,
+  text,
   uuid,
-  pgEnum,
   primaryKey,
 } from "drizzle-orm/pg-core";
 import { ImageStatus } from "~/app/shh/constants";
@@ -20,24 +19,22 @@ import { ImageStatus } from "~/app/shh/constants";
  */
 export const createTable = pgTableCreator((name) => `hershpateldotcom_${name}`);
 
-export const imageStatusEnum = pgEnum('image_status', ['pending', 'ready', 'disabled']);
-
 export const images = createTable(
   "images",
   {
     pk: uuid("pk").primaryKey().defaultRandom(),
-    status: imageStatusEnum("status").notNull().default(ImageStatus.PENDING),
-    photo_name: varchar("photo_name", { length: 256 }).notNull().unique(),
-    full_key: varchar("full_key", { length: 256 }).notNull().unique(),
-    thumbnail_key: varchar("thumbnail_key", { length: 256 }),
-    gallery_key: varchar("gallery_key", { length: 256 }),
-    camera_make: varchar("camera_make", { length: 256 }),
-    camera_model: varchar("camera_model", { length: 256 }),
+    status: text("status").notNull().default(ImageStatus.PENDING.toString()),
+    photo_name: text("photo_name").notNull().unique(),
+    full_key: text("full_key").notNull().unique(),
+    thumbnail_key: text("thumbnail_key"),
+    gallery_key: text("gallery_key"),
+    camera_make: text("camera_make"),
+    camera_model: text("camera_model"),
     original_created_at: timestamp("original_created_at", { withTimezone: true }).notNull(),
-    f_number: varchar("f_number", { length: 256 }),
-    iso: varchar("iso", { length: 256 }),
-    focal_length: varchar("focal_length", { length: 256 }),
-    exposure_time: varchar("exposure_time", { length: 256 }),
+    f_number: text("f_number"),
+    iso: text("iso"),
+    focal_length: text("focal_length"),
+    exposure_time: text("exposure_time"),
   },
   (table) => ({
     original_created_at_idx: index("original_created_at_idx").on(table.original_created_at),
@@ -49,8 +46,8 @@ export const tags = createTable(
   "tags",
   {
     pk: uuid("pk").primaryKey().defaultRandom(),
-    name: varchar("name", { length: 50 }).notNull().unique(),
-    description: varchar("description", { length: 256 }),
+    name: text("name").notNull().unique(),
+    description: text("description"),
     created_at: timestamp("created_at", { withTimezone: true }).defaultNow(),
   }
 );

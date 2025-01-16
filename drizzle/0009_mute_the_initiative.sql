@@ -1,0 +1,1 @@
+ALTER TYPE "image_status" ADD VALUE 'error';
