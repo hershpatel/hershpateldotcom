@@ -410,7 +410,7 @@ function PhotosContent() {
             }}
           />
           <DialogPanel
-            className="w-full max-w-6xl mx-auto px-16 relative border-2 border-red-500"
+            className="relative border-2 border-red-500"
             onTouchStart={(e) => {
               e.stopPropagation();
               handleTouchStart(e);
@@ -426,7 +426,7 @@ function PhotosContent() {
           >
             {selectedPhotoIndex !== null && photos[selectedPhotoIndex] && (
               <div className="relative flex justify-center items-center">
-                <div className="absolute inset-y-0 -left-16 hidden sm:flex items-center">
+                <div className="absolute -left-16 hidden sm:flex items-center h-full">
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
@@ -439,7 +439,7 @@ function PhotosContent() {
                   </button>
                 </div>
 
-                <div className="absolute inset-y-0 -right-16 hidden sm:flex items-center">
+                <div className="absolute -right-16 hidden sm:flex items-center h-full">
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
@@ -451,7 +451,7 @@ function PhotosContent() {
                     →
                   </button>
                 </div>
-                <div className="w-[75vw] h-[85vh] relative">
+                <div className="max-w-[90vw] max-h-[85vh] relative">
                   {(() => {
                     const selectedPhoto = photos[selectedPhotoIndex];
                     if (!selectedPhoto) return null;
@@ -463,17 +463,19 @@ function PhotosContent() {
                             <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-gray-200"></div>
                           </div>
                         )}
-                        <Image
-                          src={selectedPhoto.gallerySrc}
-                          alt={selectedPhoto.name}
-                          fill
-                          className={`object-contain ${
-                            loadedGalleryImages.has(selectedPhoto.id) ? 'opacity-100' : 'opacity-0'
-                          }`}
-                          sizes="(max-width: 1536px) 100vw, 1536px"
-                          priority
-                          onLoad={() => setLoadedGalleryImages(prev => new Set([...prev, selectedPhoto.id]))}
-                        />
+                        <div className="relative" style={{ width: 'fit-content', height: 'fit-content' }}>
+                          <Image
+                            src={selectedPhoto.gallerySrc}
+                            alt={selectedPhoto.name}
+                            className={`max-w-[90vw] max-h-[85vh] w-auto h-auto ${
+                              loadedGalleryImages.has(selectedPhoto.id) ? 'opacity-100' : 'opacity-0'
+                            }`}
+                            width={1920}
+                            height={1080}
+                            priority
+                            onLoad={() => setLoadedGalleryImages(prev => new Set([...prev, selectedPhoto.id]))}
+                          />
+                        </div>
                       </>
                     );
                   })()}
