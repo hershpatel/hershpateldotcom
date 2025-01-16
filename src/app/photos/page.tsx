@@ -426,7 +426,7 @@ function PhotosContent() {
           >
             {selectedPhotoIndex !== null && photos[selectedPhotoIndex] && (
               <div className="relative flex justify-center items-center">
-                <div className="absolute inset-y-0 -left-16 flex items-center">
+                <div className="absolute inset-y-0 -left-16 hidden sm:flex items-center">
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
@@ -439,7 +439,7 @@ function PhotosContent() {
                   </button>
                 </div>
 
-                <div className="absolute inset-y-0 -right-16 flex items-center">
+                <div className="absolute inset-y-0 -right-16 hidden sm:flex items-center">
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
