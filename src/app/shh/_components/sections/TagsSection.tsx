@@ -254,7 +254,7 @@ export function TagsSection() {
             ) : photosWithTagData.length === 0 ? (
               <p className="text-gray-500 py-4 text-[1.2rem]">no photos have this tag</p>
             ) : (
-              <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-8 gap-4">
+              <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-6 gap-4">
                 {photosWithTagData.map(photo => (
                   <div
                     key={photo.pk}
@@ -287,7 +287,7 @@ export function TagsSection() {
                       className={`object-cover transition-opacity duration-300 ${
                         loadedImages.has(photo.pk) ? 'opacity-100' : 'opacity-0'
                       }`}
-                      sizes="100px"
+                      sizes="(max-width: 640px) 50vw, (max-width: 768px) 25vw, 16.67vw"
                       onLoad={() => setLoadedImages(prev => new Set([...prev, photo.pk]))}
                     />
                     {selectedPhotosToRemove.has(photo.pk) && (
@@ -322,7 +322,7 @@ export function TagsSection() {
             ) : photosWithoutTag.length === 0 ? (
               <p className="text-gray-500 py-4 text-[1.2rem]">no photos available to tag</p>
             ) : (
-              <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-8 gap-4">
+              <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-6 gap-4">
                 {photosWithoutTag.map(photo => (
                   <div
                     key={photo.pk}
@@ -355,7 +355,7 @@ export function TagsSection() {
                       className={`object-cover transition-opacity duration-300 ${
                         loadedImages.has(photo.pk) ? 'opacity-100' : 'opacity-0'
                       }`}
-                      sizes="100px"
+                      sizes="(max-width: 640px) 50vw, (max-width: 768px) 25vw, 16.67vw"
                       onLoad={() => setLoadedImages(prev => new Set([...prev, photo.pk]))}
                     />
                     {selectedPhotosToAdd.has(photo.pk) && (
