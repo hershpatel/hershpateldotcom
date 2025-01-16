@@ -5,7 +5,6 @@ import Link from "next/link";
 
 const sections = [
   { path: '/shh/upload', label: 'upload images' },
-  { path: '/shh/optimize', label: 'optimize images' },
   { path: '/shh/tags', label: 'tags' },
   { path: '/shh/delete', label: 'delete images' },
 ] as const;

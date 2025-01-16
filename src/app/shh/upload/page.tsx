@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useCallback } from 'react';
@@ -9,11 +8,25 @@ import Promise from 'bluebird';
 interface UploadProgress {
     file: File;
     progress: number;
-    status: 'waiting' | 'uploading' | 'completed' | 'error';
+    status: 'waiting' | 'uploading' | 'creating' | 'optimizing' | 'completed' | 'error';
     error?: string;
+    sizes?: {
+      thumbnailSize: number;
+      gallerySize: number;
+      fullSize: number;
+    };
   }
   
   const BATCH_SIZE = 10;
+
+  const STATUS_EMOJI: Record<UploadProgress['status'], string> = {
+    waiting: '🔜',
+    uploading: '🔄',
+    creating: '📝',
+    optimizing: '⚡',
+    completed: '✅',
+    error: '❌',
+  };
 
 export default function UploadPage() {
     const [uploadQueue, setUploadQueue] = useState<UploadProgress[]>([]);
@@ -44,6 +57,7 @@ export default function UploadPage() {
   
     const getUploadUrls = api.photos.getUploadUrls.useMutation();
     const createPhotoRecord = api.photos.createPhotoRecord.useMutation();
+    const optimizeMutation = api.photos.optimizeImage.useMutation();
   
     const uploadBatch = async (batch: UploadProgress[]) => {
       try {
@@ -84,17 +98,44 @@ export default function UploadPage() {
             if (!response.ok) {
               throw new Error(`Upload failed with status ${response.status}`);
             }
+
+            // Update status to creating record
+            setUploadQueue(prev => prev.map(queueItem => 
+              queueItem.file === item.file 
+                ? { ...queueItem, status: 'creating' }
+                : queueItem
+            ));
   
             // Create database record
-            await createPhotoRecord.mutateAsync({
+            const record = await createPhotoRecord.mutateAsync({
               photoName: item.file.name,
               fullKey: key,
             });
-  
-            // Update status to completed
+
+            // Update status to optimizing
             setUploadQueue(prev => prev.map(queueItem => 
               queueItem.file === item.file 
-                ? { ...queueItem, status: 'completed' }
+                ? { ...queueItem, status: 'optimizing' }
+                : queueItem
+            ));
+
+            // Optimize the image
+            const optimizeResult = await optimizeMutation.mutateAsync({
+              fullKey: key,
+            });
+  
+            // Update status to completed with sizes
+            setUploadQueue(prev => prev.map(queueItem => 
+              queueItem.file === item.file 
+                ? { 
+                    ...queueItem, 
+                    status: 'completed',
+                    sizes: {
+                      thumbnailSize: optimizeResult.thumbnailSize,
+                      gallerySize: optimizeResult.gallerySize,
+                      fullSize: optimizeResult.fullSize,
+                    }
+                  }
                 : queueItem
             ));
           } catch (error) {
@@ -133,16 +174,14 @@ export default function UploadPage() {
     };
   
     const getStatusIndicator = (status: UploadProgress['status']) => {
-      switch (status) {
-        case 'waiting':
-          return '🔜';
-        case 'uploading':
-          return '🔄';
-        case 'completed':
-          return '✅';
-        case 'error':
-          return '❌';
+      return STATUS_EMOJI[status];
+    };
+
+    const formatSize = (bytes: number) => {
+      if (bytes > 1024 * 1024) {
+        return `${(bytes / (1024 * 1024)).toFixed(2)}MB`;
       }
+      return `${(bytes / 1024).toFixed(2)}KB`;
     };
   
     return (
@@ -174,19 +213,33 @@ export default function UploadPage() {
   
             <div className="space-y-3">
               {uploadQueue.map((item, index) => (
-                <div key={item.file.name + index} className="flex items-center gap-2 py-2">
-                  <button
-                    onClick={() => removeFile(index)}
-                    className="text-red-500 hover:text-red-700 disabled:text-gray-400 flex-shrink-0"
-                    disabled={isUploading}
-                  >
-                    ×
-                  </button>
-                  |
-                  <span className="text-lg flex-shrink-0">
-                    {getStatusIndicator(item.status)}
-                  </span>
-                  <span className="truncate">{item.file.name}</span>
+                <div key={item.file.name + index} className="flex flex-col gap-1">
+                  <div className="flex items-center gap-2 py-2">
+                    <button
+                      onClick={() => removeFile(index)}
+                      className="text-red-500 hover:text-red-700 disabled:text-gray-400 flex-shrink-0"
+                      disabled={isUploading}
+                    >
+                      ×
+                    </button>
+                    |
+                    <span className="text-lg flex-shrink-0">
+                      {getStatusIndicator(item.status)}
+                    </span>
+                    <span className="truncate">{item.file.name}</span>
+                  </div>
+                  {item.status === 'completed' && item.sizes && (
+                    <div className="ml-8 text-xlg text-gray-600">
+                      full: {formatSize(item.sizes.fullSize)} →{' '}
+                      gallery: {formatSize(item.sizes.gallerySize)},{' '}
+                      thumbnail: {formatSize(item.sizes.thumbnailSize)}
+                    </div>
+                  )}
+                  {item.status === 'error' && item.error && (
+                    <div className="ml-8 text-sm text-red-600">
+                      {item.error}
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
