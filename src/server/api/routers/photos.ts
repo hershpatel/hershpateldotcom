@@ -70,16 +70,18 @@ interface ImageMetadata {
 }
 
 const extractMetadata = async (imageBuffer: Uint8Array): Promise<ImageMetadata> => {
-  const metadata = await sharp(imageBuffer).metadata();
-
-  if (!metadata.exif) {
-    return {};
-  }
-
   try {
-    return await exifr.parse(imageBuffer, {
+    const metadata = await sharp(imageBuffer).metadata();
+
+    if (!metadata.exif) {
+      return {};
+    }
+
+    const exifData = await exifr.parse(imageBuffer, {
       pick: ['Make', 'Model', 'DateTimeOriginal', 'FNumber', 'ISO', 'FocalLength', 'ExposureTime']
-    }) as ImageMetadata;
+    });
+
+    return exifData || {};
   } catch (exifError) {
     console.error('Error parsing EXIF data:', exifError);
     return {};
@@ -302,15 +304,15 @@ export const photosRouter = createTRPCRouter({
 
         // Get image metadata and EXIF data
         const imageBuffer = await originalImage.Body.transformToByteArray();
-        const metadata = await extractMetadata(imageBuffer);
+        const metadata = await extractMetadata(imageBuffer) || {};
         const s3Metadata = {
-          make: metadata.Make ?? '',
-          model: metadata.Model ?? '',
-          originalCreatedAt: metadata.DateTimeOriginal ?? new Date(),
-          iso: metadata.ISO?.toString() ?? '',
-          focalLength: metadata.FocalLength?.toString() ?? '',
-          exposureTime: metadata.ExposureTime?.toString() ?? '',
-          fNumber: metadata.FNumber?.toString() ?? '',
+          make: metadata?.Make || '',
+          model: metadata?.Model || '',
+          originalCreatedAt: metadata?.DateTimeOriginal || new Date(),
+          iso: metadata?.ISO?.toString() || '',
+          focalLength: metadata?.FocalLength?.toString() || '',
+          exposureTime: metadata?.ExposureTime?.toString() || '',
+          fNumber: metadata?.FNumber?.toString() || '',
         };
 
         // Generate thumbnail (low quality)
@@ -359,13 +361,13 @@ export const photosRouter = createTRPCRouter({
           .set({
             thumbnail_key: thumbnailKey,
             gallery_key: galleryKey,
-            camera_make: s3Metadata.make?.trim() || null,
-            camera_model: s3Metadata.model?.trim() || null,
+            camera_make: s3Metadata.make || null,
+            camera_model: s3Metadata.model || null,
             original_created_at: s3Metadata.originalCreatedAt,
-            iso: s3Metadata.iso?.trim() || null,
-            focal_length: s3Metadata.focalLength?.toString() || null,
-            exposure_time: s3Metadata.exposureTime?.toString() || null,
-            f_number: s3Metadata.fNumber?.toString() || null,
+            iso: s3Metadata.iso || null,
+            focal_length: s3Metadata.focalLength || null,
+            exposure_time: s3Metadata.exposureTime || null,
+            f_number: s3Metadata.fNumber || null,
             status: ImageStatus.READY.toString(),
           })
           .where(eq(images.full_key, input.fullKey))
