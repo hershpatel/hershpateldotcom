@@ -1,0 +1,21 @@
+name: Weekly Health Check
+
+on:
+  schedule:
+    # Run at 11:00 PM EST every Sunday (3:00 UTC Monday)
+    - cron: '0 3 * * 1'
+  # Allow manual trigger
+  workflow_dispatch:
+
+jobs:
+  health_check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check website health
+        run: |
+          response=$(curl -s -o /dev/null -w "%{http_code}" --max-time 5 https://hershpatel.com/photos)
+          if [ "$response" != "200" ]; then
+            echo "Website returned HTTP status $response"
+            exit 1
+          fi
+          echo "Website is healthy (HTTP 200)"
