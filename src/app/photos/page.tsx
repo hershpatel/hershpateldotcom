@@ -262,9 +262,9 @@ function PhotosContent() {
 
   return (
     <main className="min-h-screen bg-white p-8">
-      <div className="max-w-[95%] sm:max-w-[85%] md:max-w-[75%] mx-auto">
+      <div className="max-w-[95%] sm:max-w-[88%] md:max-w-[80%] mx-auto">
         <div className="flex flex-col gap-8 mb-8">
-          <Link href="/" className="text-[1.6rem] link-style inline-block">&larr; back</Link>
+          <Link href="/" className="text-[1.6rem] link-style inline-block mb-20">&larr; back</Link>
 
           {!isLoadingPhotos && photos.length > 0 && (
             <div className="flex flex-col gap-4">
