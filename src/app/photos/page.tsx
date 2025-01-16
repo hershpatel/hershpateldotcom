@@ -4,6 +4,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { useState, useCallback, useEffect, useRef } from 'react'
 import { Dialog, DialogPanel } from '@headlessui/react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { api } from "~/trpc/react"
 import { ImageStatus } from '../shh/constants'
 
@@ -20,24 +21,45 @@ type Tag = {
 }
 
 export default function Photos() {
-  const [selectedPhotoIndex, setSelectedPhotoIndex] = useState<number | null>(null);
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  
+  // Set default URL parameters
+  useEffect(() => {
+    const params = new URLSearchParams(searchParams.toString());
+    if (!params.has('sort')) {
+      params.set('sort', 'newest');
+      router.replace(`/photos?${params.toString()}`);
+    }
+  }, [router, searchParams]);
+
+  // Initialize state
   const [touchStart, setTouchStart] = useState<number | null>(null);
   const [touchEnd, setTouchEnd] = useState<number | null>(null);
   const [loadedThumbnails, setLoadedThumbnails] = useState<Set<string>>(new Set());
   const [loadedGalleryImages, setLoadedGalleryImages] = useState<Set<string>>(new Set());
-  const [isRandom, setIsRandom] = useState(false);
-  const [isAscending, setIsAscending] = useState(false);
-  const [selectedTags, setSelectedTags] = useState<Tag[]>([]);
   const [isTagDropdownOpen, setIsTagDropdownOpen] = useState(false);
   const tagDropdownRef = useRef<HTMLDivElement>(null);
 
-  // Fetch tags
+  // Get URL parameters
+  const isRandom = searchParams.get('sort') === 'random';
+  const isAscending = searchParams.get('sort') === 'oldest';
+  const isNewest = searchParams.get('sort') === 'newest';
+  const urlTags = searchParams.get('tags')?.split(',').filter(Boolean) ?? [];
+  const photoId = searchParams.get('photo');
+
+  // Fetch data
   const { data: tags = [] } = api.tags.list.useQuery(undefined, {
     refetchOnWindowFocus: false,
     refetchOnMount: false,
   });
 
-  // Fetch S3 photos
+  // Get selected tags from URL
+  const selectedTags = urlTags
+    .map(tagPk => tags.find(t => t.pk === tagPk))
+    .filter((tag): tag is NonNullable<typeof tag> => tag !== undefined)
+    .map(tag => ({ pk: tag.pk, name: tag.name }));
+
   const { data: dbPhotos = [], isLoading: isLoadingPhotos } = api.photos.listPhotosWithUrls.useQuery(
     {
       status: ImageStatus.READY, 
@@ -51,7 +73,7 @@ export default function Photos() {
     }
   );
 
-  // Convert to Photo objects
+  // Convert to Photo objects and find selected photo index
   const photos: Photo[] = dbPhotos
     .filter((photo): photo is typeof photo & { thumbnailUrl: string; galleryUrl: string } => 
       Boolean(photo.thumbnailUrl && photo.galleryUrl)
@@ -62,37 +84,130 @@ export default function Photos() {
       gallerySrc: photo.galleryUrl,
       name: photo.fullKey.split('/').pop() ?? photo.fullKey,
     }));
+  
+  // Find the index of the selected photo
+  const selectedPhotoIndex = photoId ? photos.findIndex(photo => photo.id === photoId) : null;
 
-  const handleShuffle = useCallback(() => {
-    setSelectedPhotoIndex(null);
-    setIsRandom(prev => !prev);
-    if (!isRandom) {
-      setIsAscending(false);
+  // Update URL helper function
+  const updateUrlParams = useCallback((updates: { sort?: string; tags?: string[]; photo?: string | null }) => {
+    const params = new URLSearchParams(searchParams.toString());
+    
+    if (updates.sort !== undefined) {
+      if (updates.sort) {
+        params.set('sort', updates.sort);
+      } else {
+        params.delete('sort');
+      }
     }
-  }, [isRandom]);
+    
+    if (updates.tags !== undefined) {
+      if (updates.tags.length > 0) {
+        params.set('tags', updates.tags.join(','));
+      } else {
+        params.delete('tags');
+      }
+    }
+
+    if (updates.photo !== undefined) {
+      if (updates.photo) {
+        params.set('photo', updates.photo);
+      } else {
+        params.delete('photo');
+      }
+    }
+    
+    router.push(`/photos?${params.toString()}`);
+  }, [searchParams, router]);
+
+  // Sorting handlers
+  const handleShuffle = useCallback(() => {
+    updateUrlParams({ sort: isRandom ? '' : 'random', photo: null });
+  }, [isRandom, updateUrlParams]);
 
   const handleAscending = useCallback(() => {
-    setSelectedPhotoIndex(null);
-    setIsAscending(prev => !prev);
-    if (!isAscending) {
-      setIsRandom(false);
-    }
-  }, [isAscending]);
+    updateUrlParams({ sort: isAscending ? '' : 'oldest', photo: null });
+  }, [isAscending, updateUrlParams]);
 
   const handleDescending = useCallback(() => {
-    setSelectedPhotoIndex(null);
-    setIsRandom(false);
-    setIsAscending(false);
-  }, []);
+    updateUrlParams({ sort: 'newest', photo: null });
+  }, [updateUrlParams]);
 
+  // Tag handlers
   const handleTagSelect = (tag: Tag) => {
     if (!selectedTags.find(t => t.pk === tag.pk)) {
-      setSelectedTags([...selectedTags, tag]);
+      const newTags = [...selectedTags, tag];
+      updateUrlParams({ tags: newTags.map(t => t.pk), photo: null });
     }
   };
 
   const handleTagRemove = (tagPk: string) => {
-    setSelectedTags(selectedTags.filter(tag => tag.pk !== tagPk));
+    const newTags = selectedTags.filter(tag => tag.pk !== tagPk);
+    updateUrlParams({ tags: newTags.map(t => t.pk), photo: null });
+  };
+
+  // Photo modal handlers
+  const handlePhotoSelect = useCallback((index: number) => {
+    const photo = photos[index];
+    if (photo) {
+      updateUrlParams({ photo: photo.id });
+    }
+  }, [photos, updateUrlParams]);
+
+  const handleCloseModal = useCallback(() => {
+    updateUrlParams({ photo: null });
+  }, [updateUrlParams]);
+
+  const handleNextPhoto = useCallback(() => {
+    if (selectedPhotoIndex !== null && selectedPhotoIndex < photos.length - 1) {
+      const nextPhoto = photos[selectedPhotoIndex + 1];
+      if (nextPhoto) {
+        updateUrlParams({ photo: nextPhoto.id });
+      }
+    }
+  }, [selectedPhotoIndex, photos, updateUrlParams]);
+
+  const handlePrevPhoto = useCallback(() => {
+    if (selectedPhotoIndex !== null && selectedPhotoIndex > 0) {
+      const prevPhoto = photos[selectedPhotoIndex - 1];
+      if (prevPhoto) {
+        updateUrlParams({ photo: prevPhoto.id });
+      }
+    }
+  }, [selectedPhotoIndex, photos, updateUrlParams]);
+
+  // Update keyboard and touch handlers
+  const handleKeyDown = useCallback((e: KeyboardEvent) => {
+    if (selectedPhotoIndex === null) return;
+    
+    if (e.key === 'ArrowRight' && selectedPhotoIndex < photos.length - 1) {
+      handleNextPhoto();
+    }
+    if (e.key === 'ArrowLeft' && selectedPhotoIndex > 0) {
+      handlePrevPhoto();
+    }
+    if (e.key === 'Escape') {
+      handleCloseModal();
+    }
+  }, [selectedPhotoIndex, photos.length, handleNextPhoto, handlePrevPhoto, handleCloseModal]);
+
+  const handleTouchEnd = () => {
+    if (!touchStart || !touchEnd) return;
+    
+    const distance = touchStart - touchEnd;
+    const isLeftSwipe = distance > 50;
+    const isRightSwipe = distance < -50;
+
+    if (selectedPhotoIndex !== null) {
+      if (isLeftSwipe && selectedPhotoIndex < photos.length - 1) {
+        handleNextPhoto();
+      }
+      if (isRightSwipe && selectedPhotoIndex > 0) {
+        handlePrevPhoto();
+      }
+    }
+
+    setTouchStart(null);
+    setTouchEnd(null);
   };
 
   const handleTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
@@ -108,40 +223,6 @@ export default function Photos() {
       setTouchEnd(touch.clientX);
     }
   };
-
-  const handleTouchEnd = () => {
-    if (!touchStart || !touchEnd) return;
-    
-    const distance = touchStart - touchEnd;
-    const isLeftSwipe = distance > 50;
-    const isRightSwipe = distance < -50;
-
-    if (selectedPhotoIndex !== null) {
-      if (isLeftSwipe && selectedPhotoIndex < photos.length - 1) {
-        setSelectedPhotoIndex(selectedPhotoIndex + 1);
-      }
-      if (isRightSwipe && selectedPhotoIndex > 0) {
-        setSelectedPhotoIndex(selectedPhotoIndex - 1);
-      }
-    }
-
-    setTouchStart(null);
-    setTouchEnd(null);
-  };
-
-  const handleKeyDown = useCallback((e: KeyboardEvent) => {
-    if (selectedPhotoIndex === null) return;
-    
-    if (e.key === 'ArrowRight' && selectedPhotoIndex < photos.length - 1) {
-      setSelectedPhotoIndex(selectedPhotoIndex + 1);
-    }
-    if (e.key === 'ArrowLeft' && selectedPhotoIndex > 0) {
-      setSelectedPhotoIndex(selectedPhotoIndex - 1);
-    }
-    if (e.key === 'Escape') {
-      setSelectedPhotoIndex(null);
-    }
-  }, [selectedPhotoIndex, photos.length]);
 
   // Add keyboard event listeners
   useEffect(() => {
@@ -184,7 +265,7 @@ export default function Photos() {
             <div className="flex flex-col gap-4">
               <div className="flex gap-4 items-center">
                 <button 
-                  onClick={handleDescending}
+                  onClick={() => updateUrlParams({ sort: 'newest' })}
                   className={`
                     text-[2rem] transition-all w-fit
                     ${!isRandom && !isAscending
@@ -198,7 +279,7 @@ export default function Photos() {
                 </button>
 
                 <button 
-                  onClick={handleAscending}
+                  onClick={() => updateUrlParams({ sort: 'oldest' })}
                   className={`
                     text-[2rem] transition-all w-fit
                     ${isAscending 
@@ -212,7 +293,7 @@ export default function Photos() {
                 </button>
 
                 <button 
-                  onClick={handleShuffle}
+                  onClick={() => updateUrlParams({ sort: isRandom ? '' : 'random' })}
                   className={`
                     text-[2rem] transition-all w-fit
                     ${isRandom 
@@ -303,7 +384,7 @@ export default function Photos() {
               <div 
                 key={photo.id} 
                 className="aspect-square relative cursor-pointer"
-                onClick={() => setSelectedPhotoIndex(index)}
+                onClick={() => handlePhotoSelect(index)}
               >
                 {!loadedThumbnails.has(photo.id) && (
                   <div className="absolute inset-0 flex items-center justify-center bg-gray-100">
@@ -328,7 +409,7 @@ export default function Photos() {
 
       <Dialog 
         open={selectedPhotoIndex !== null} 
-        onClose={() => setSelectedPhotoIndex(null)}
+        onClose={handleCloseModal}
         className="relative z-50"
       >
         <div className="fixed inset-0 bg-black/80" aria-hidden="true" />
@@ -346,9 +427,7 @@ export default function Photos() {
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
-                      if (selectedPhotoIndex > 0) {
-                        setSelectedPhotoIndex(selectedPhotoIndex - 1);
-                      }
+                      handlePrevPhoto();
                     }}
                     className="p-4 text-black bg-white/90 rounded-full hover:bg-white disabled:opacity-50 disabled:cursor-not-allowed"
                     disabled={selectedPhotoIndex === 0}
@@ -361,9 +440,7 @@ export default function Photos() {
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
-                      if (selectedPhotoIndex < photos.length - 1) {
-                        setSelectedPhotoIndex(selectedPhotoIndex + 1);
-                      }
+                      handleNextPhoto();
                     }}
                     className="p-4 text-black bg-white/90 rounded-full hover:bg-white disabled:opacity-50 disabled:cursor-not-allowed"
                     disabled={selectedPhotoIndex === photos.length - 1}
