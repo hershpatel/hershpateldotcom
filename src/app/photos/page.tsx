@@ -197,6 +197,9 @@ function PhotosContent() {
   };
 
   const handleTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
+    // Only track touch for single finger gestures
+    if (e.touches.length !== 1) return;
+    
     const touch = e.targetTouches[0];
     if (touch) {
       setTouchStart(touch.clientX);
@@ -204,6 +207,9 @@ function PhotosContent() {
   };
 
   const handleTouchMove = (e: React.TouchEvent<HTMLDivElement>) => {
+    // Only track touch for single finger gestures
+    if (e.touches.length !== 1) return;
+    
     const touch = e.targetTouches[0];
     if (touch) {
       setTouchEnd(touch.clientX);
