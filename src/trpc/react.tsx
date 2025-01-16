@@ -57,7 +57,7 @@ export function TRPCReactProvider(props: { children: React.ReactNode }) {
           },
           fetch: async (url, options) => {
             const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+            const timeoutId = setTimeout(() => controller.abort(), 60000); // 30 second timeout
             
             const fetchWithRetry = async (attempt = 0): Promise<Response> => {
               try {

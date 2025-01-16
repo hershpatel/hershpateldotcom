@@ -17,7 +17,7 @@ interface UploadProgress {
     };
   }
   
-  const BATCH_SIZE = 10;
+  const BATCH_SIZE = 5;
 
   const STATUS_EMOJI: Record<UploadProgress['status'], string> = {
     waiting: '🔜',
@@ -107,7 +107,7 @@ export default function UploadPage() {
             ));
   
             // Create database record
-            const record = await createPhotoRecord.mutateAsync({
+            await createPhotoRecord.mutateAsync({
               photoName: item.file.name,
               fullKey: key,
             });
