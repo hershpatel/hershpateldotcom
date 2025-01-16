@@ -32,6 +32,12 @@ export default function UploadPage() {
     const [uploadQueue, setUploadQueue] = useState<UploadProgress[]>([]);
     const [isUploading, setIsUploading] = useState(false);
   
+    const calculateOverallProgress = useCallback(() => {
+        if (uploadQueue.length === 0) return 0;
+        const completedFiles = uploadQueue.filter(item => item.status === 'completed').length;
+        return (completedFiles / uploadQueue.length) * 100;
+    }, [uploadQueue]);
+  
     const onDrop = useCallback((acceptedFiles: File[]) => {
       const newFiles = acceptedFiles.map((file): UploadProgress => ({
         file,
@@ -209,7 +215,32 @@ export default function UploadPage() {
               >
                 clear all
               </button>
-            </h2> 
+            </h2>
+
+            <button
+              onClick={startUpload}
+              className="w-[100px] bg-black text-white py-2 rounded-lg hover:bg-gray-800 disabled:bg-gray-400"
+              disabled={isUploading}
+            >
+              {isUploading ? 'uploading...' : 'upload'}
+            </button>
+
+            {/* Add Progress Bar */}
+            {uploadQueue.length > 0 && (
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <div className="text-gray-600 w-12">
+                  {Math.round(calculateOverallProgress())}%
+                </div>
+                <div className="w-full h-2 bg-gray-200 rounded-full overflow-hidden">
+                  <div 
+                    className="h-full bg-black transition-all duration-300 ease-out"
+                    style={{ width: `${calculateOverallProgress()}%` }}
+                  />
+                </div>
+              </div>
+            </div>
+            )}
   
             <div className="space-y-3">
               {uploadQueue.map((item, index) => (
@@ -243,14 +274,6 @@ export default function UploadPage() {
                 </div>
               ))}
             </div>
-  
-            <button
-              onClick={startUpload}
-              className="w-[100px] bg-black text-white py-2 rounded-lg hover:bg-gray-800 disabled:bg-gray-400"
-              disabled={isUploading}
-            >
-              {isUploading ? 'uploading...' : 'upload'}
-            </button>
           </div>
         )}
       </div>

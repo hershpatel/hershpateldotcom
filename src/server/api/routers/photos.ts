@@ -16,16 +16,16 @@ const IMAGE_OPTIMIZATION_CONFIG = {
     width: 400,
     height: 400,
     webp: {
-      quality: 80,
-      effort: 4
+      quality: 75,
+      effort: 5
     }
   },
   GALLERY: {
     width: 2700,
     height: null,
     webp: {
-      quality: 80,
-      effort: 5
+      quality: 75,
+      effort: 6
     }
   }
 } as const;
@@ -359,13 +359,13 @@ export const photosRouter = createTRPCRouter({
           .set({
             thumbnail_key: thumbnailKey,
             gallery_key: galleryKey,
-            camera_make: s3Metadata.make.trim(),
-            camera_model: s3Metadata.model.trim(),
+            camera_make: s3Metadata.make?.trim() || null,
+            camera_model: s3Metadata.model?.trim() || null,
             original_created_at: s3Metadata.originalCreatedAt,
-            iso: s3Metadata.iso.trim(),
-            focal_length: s3Metadata.focalLength,
-            exposure_time: s3Metadata.exposureTime,
-            f_number: s3Metadata.fNumber,
+            iso: s3Metadata.iso?.trim() || null,
+            focal_length: s3Metadata.focalLength?.toString() || null,
+            exposure_time: s3Metadata.exposureTime?.toString() || null,
+            f_number: s3Metadata.fNumber?.toString() || null,
             status: ImageStatus.READY.toString(),
           })
           .where(eq(images.full_key, input.fullKey))
