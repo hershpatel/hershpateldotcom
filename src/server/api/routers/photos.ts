@@ -6,7 +6,7 @@ import { createTRPCRouter, publicProcedure } from "~/server/api/trpc";
 import sharp from "sharp";
 import { images, imageTags, tags } from "~/server/db/schema";
 import { ImageStatus } from "~/app/shh/constants";
-import { eq, inArray, and } from "drizzle-orm";
+import { eq, inArray } from "drizzle-orm";
 import Bluebird from "bluebird";
 import exifr from 'exifr';
 
@@ -229,7 +229,7 @@ export const photosRouter = createTRPCRouter({
             : (images, { desc, asc }) => [input.ascending ? asc(images.original_created_at) : desc(images.original_created_at)],
         });
 
-        let tagsByPhotoPk = new Map<string, Array<{ pk: string; name: string; }>>();
+        const tagsByPhotoPk = new Map<string, Array<{ pk: string; name: string; }>>();
         
         if (input.includeTags) {
           // Then get tags for all photos in a single query

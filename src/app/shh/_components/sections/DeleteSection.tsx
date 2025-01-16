@@ -121,6 +121,7 @@ export function DeleteSection() {
           >
             {isDeleting ? '🗑️ Deleting...' : `🗑️ ${selectedPhotos.size} selected`}
           </button>
+          {/* eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing */}
           {(selectedTags.size > 0 || dateRange.start || dateRange.end) && (
             <button
               onClick={clearFilters}
