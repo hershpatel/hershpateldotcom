@@ -42,6 +42,7 @@ function PhotosContent() {
   const [loadedGalleryImages, setLoadedGalleryImages] = useState<Set<string>>(new Set());
   const [isTagDropdownOpen, setIsTagDropdownOpen] = useState(false);
   const tagDropdownRef = useRef<HTMLDivElement>(null);
+  const currentlyPreloading = useRef<Set<string>>(new Set());
 
   // Get URL parameters
   const isRandom = searchParams.get('sort') === 'random';
@@ -259,6 +260,58 @@ function PhotosContent() {
       document.removeEventListener('keydown', handleEscapeKey);
     };
   }, [isTagDropdownOpen]);
+
+  // Add preloadImage utility function
+  const preloadImage = useCallback((src: string): Promise<void> => {
+    return new Promise<void>((resolve, reject) => {
+      const img = new window.Image();
+      img.onload = () => resolve();
+      img.onerror = reject;
+      img.src = src;
+    });
+  }, []);
+
+  // Enhanced preloading effect
+  useEffect(() => {
+    if (selectedPhotoIndex === null) {
+      currentlyPreloading.current.clear();
+      return;
+    }
+
+    const preloadNearbyImages = async () => {
+      const imagesToPreload: string[] = [];
+      
+      // Preload next 2 images
+      for (let i = 1; i <= 2; i++) {
+        const nextIndex = selectedPhotoIndex + i;
+        const nextPhoto = photos[nextIndex];
+        if (nextIndex < photos.length && nextPhoto?.gallerySrc && !currentlyPreloading.current.has(nextPhoto.gallerySrc)) {
+          imagesToPreload.push(nextPhoto.gallerySrc);
+        }
+      }
+      
+      // Preload previous image
+      const prevPhoto = photos[selectedPhotoIndex - 1];
+      if (selectedPhotoIndex > 0 && prevPhoto?.gallerySrc && !currentlyPreloading.current.has(prevPhoto.gallerySrc)) {
+        imagesToPreload.push(prevPhoto.gallerySrc);
+      }
+
+      // Add to currently preloading set before starting
+      imagesToPreload.forEach(src => currentlyPreloading.current.add(src));
+
+      // Preload images in parallel
+      try {
+        await Promise.all(imagesToPreload.map(src => preloadImage(src)));
+      } catch (error) {
+        console.error('Failed to preload some images:', error);
+      } finally {
+        // Clean up preloading set regardless of success/failure
+        imagesToPreload.forEach(src => currentlyPreloading.current.delete(src));
+      }
+    };
+
+    preloadNearbyImages();
+  }, [selectedPhotoIndex, photos, preloadImage]);
 
   return (
     <main className="min-h-screen bg-white p-8">
