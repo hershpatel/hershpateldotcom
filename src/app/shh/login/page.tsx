@@ -127,7 +127,7 @@ function LoginForm() {
   );
 }
 
-export default function LoginPage() {
+const Page = () => {
   return (
     <main className="min-h-screen bg-white text-[#413F3D] flex items-center justify-center">
       <style jsx global>{`
@@ -148,3 +148,5 @@ export default function LoginPage() {
     </main>
   );
 }
+
+export default Page;

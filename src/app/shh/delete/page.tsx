@@ -1,11 +1,12 @@
+
 'use client';
 
 import { useState } from 'react';
 import Image from 'next/image';
 import { api } from "~/trpc/react";
-import { ImageStatus } from '../../constants';
+import { ImageStatus } from '../constants';
 
-export function DeleteSection() {
+export default function DeletePage() {
   const [selectedPhotos, setSelectedPhotos] = useState<Set<string>>(new Set());
   const [isDeleting, setIsDeleting] = useState(false);
   const [loadedImages, setLoadedImages] = useState<Set<string>>(new Set());
@@ -70,7 +71,7 @@ export function DeleteSection() {
   const handleDateChange = (type: 'start' | 'end', value: string) => {
     setDateRange(prev => ({
       ...prev,
-      [type]: value || undefined
+      [type]: value ?? undefined
     }));
   };
 
