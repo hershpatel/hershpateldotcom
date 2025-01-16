@@ -320,8 +320,8 @@ function PhotosContent() {
                         ${tags.length === 0 
                           ? 'opacity-50 cursor-not-allowed'
                           : selectedTags.length === tags.length
-                            ? 'translate-y-[1px] opacity-60 shadow-inner' 
-                            : 'hover:opacity-80 drop-shadow-md'
+                            ? 'translate-y-[1px] opacity-40 shadow-inner' 
+                            : 'hover:opacity-50 drop-shadow-md'
                         }
                       `}
                       title={tags.length === 0 ? "no tags available" : "filter by tags"}
@@ -352,6 +352,20 @@ function PhotosContent() {
                       </div>
                     )}
                   </div>
+
+                  <button 
+                    onClick={() => updateUrlParams({ sort: 'newest', tags: [], photo: null })}
+                    className={`
+                      text-[1.2rem] sm:text-[1.2rem] transition-all w-fit
+                      ${!isRandom && !isAscending && selectedTags.length === 0
+                        ? 'translate-y-[1px] opacity-40 shadow-inner' 
+                        : 'link-style hover:underline drop-shadow-md'
+                      }
+                    `}
+                    title="reset all filters"
+                  >
+                    clear filters
+                  </button>
                 </div>
 
                 {selectedTags.length > 0 && (
