@@ -24,8 +24,8 @@ const IMAGE_OPTIMIZATION_CONFIG = {
     width: 2700,
     height: null,
     webp: {
-      quality: 85,
-      effort: 4
+      quality: 80,
+      effort: 5
     }
   }
 } as const;

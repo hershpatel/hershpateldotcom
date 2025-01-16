@@ -51,8 +51,8 @@ export default function UploadPage() {
       accept: {
         'image/*': ['.jpeg', '.jpg', '.png', '.gif', '.webp', '.heic', '.heif']
       },
-      maxSize: 30 * 1024 * 1024, // 30MB
-      maxFiles: 50,
+      maxSize: 50 * 1024 * 1024, // 50MB
+      maxFiles: 250,
     });
   
     const getUploadUrls = api.photos.getUploadUrls.useMutation();
