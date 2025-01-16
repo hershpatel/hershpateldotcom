@@ -79,9 +79,9 @@ const extractMetadata = async (imageBuffer: Uint8Array): Promise<ImageMetadata> 
 
     const exifData = await exifr.parse(imageBuffer, {
       pick: ['Make', 'Model', 'DateTimeOriginal', 'FNumber', 'ISO', 'FocalLength', 'ExposureTime']
-    });
+    }) as ImageMetadata;
 
-    return exifData || {};
+    return exifData ?? {};
   } catch (exifError) {
     console.error('Error parsing EXIF data:', exifError);
     return {};
@@ -304,15 +304,15 @@ export const photosRouter = createTRPCRouter({
 
         // Get image metadata and EXIF data
         const imageBuffer = await originalImage.Body.transformToByteArray();
-        const metadata = await extractMetadata(imageBuffer) || {};
+        const metadata = await extractMetadata(imageBuffer) ?? {};
         const s3Metadata = {
-          make: metadata?.Make || '',
-          model: metadata?.Model || '',
-          originalCreatedAt: metadata?.DateTimeOriginal || new Date(),
-          iso: metadata?.ISO?.toString() || '',
-          focalLength: metadata?.FocalLength?.toString() || '',
-          exposureTime: metadata?.ExposureTime?.toString() || '',
-          fNumber: metadata?.FNumber?.toString() || '',
+          make: metadata?.Make ?? '',
+          model: metadata?.Model ?? '',
+          originalCreatedAt: metadata?.DateTimeOriginal ?? new Date(),
+          iso: metadata?.ISO?.toString() ?? '',
+          focalLength: metadata?.FocalLength?.toString() ?? '',
+          exposureTime: metadata?.ExposureTime?.toString() ?? '',
+          fNumber: metadata?.FNumber?.toString() ?? '',
         };
 
         // Generate thumbnail (low quality)

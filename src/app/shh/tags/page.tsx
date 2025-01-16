@@ -39,6 +39,7 @@ export default function TagsPage() {
     // Query photos that have the selected tag
     const { data: photosWithTag = [], refetch: refetchPhotosWithTag } = api.tags.getPhotosWithTag.useQuery(
       { tagPk: selectedTagPk! },
+      /* eslint-disable @typescript-eslint/prefer-optional-chain */
       { enabled: !!selectedTagPk }
     );
   
