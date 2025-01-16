@@ -310,7 +310,7 @@ function PhotosContent() {
       }
     };
 
-    preloadNearbyImages();
+    void preloadNearbyImages();
   }, [selectedPhotoIndex, photos, preloadImage]);
 
   return (
