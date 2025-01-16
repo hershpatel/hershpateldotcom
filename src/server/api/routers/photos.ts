@@ -24,7 +24,7 @@ const IMAGE_OPTIMIZATION_CONFIG = {
     width: 2700,
     height: null,
     webp: {
-      quality: 80,
+      quality: 85,
       effort: 4
     }
   }
@@ -53,6 +53,8 @@ function getS3Client() {
       accessKeyId: accessKey,
       secretAccessKey: secretKey,
     },
+    maxAttempts: 3,
+    retryMode: "standard"
   });
 }
 const s3Client = getS3Client();
