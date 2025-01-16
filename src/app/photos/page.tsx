@@ -13,6 +13,8 @@ type Photo = {
   thumbnailSrc: string;
   gallerySrc: string;
   name: string;
+  createdAt: Date;
+  cameraModel: string | null;
 }
 
 type Tag = {
@@ -77,12 +79,16 @@ function PhotosContent() {
     .filter((photo): photo is typeof photo & { thumbnailUrl: string; galleryUrl: string } => 
       Boolean(photo.thumbnailUrl && photo.galleryUrl)
     )
-    .map((photo) => ({
-      id: photo.pk,
-      thumbnailSrc: photo.thumbnailUrl,
-      gallerySrc: photo.galleryUrl,
-      name: photo.fullKey.split('/').pop() ?? photo.fullKey,
-    }));
+    .map((dbPhoto) => {
+      return {
+        id: dbPhoto.pk,
+        thumbnailSrc: dbPhoto.thumbnailUrl,
+        gallerySrc: dbPhoto.galleryUrl,
+        name: dbPhoto.fullKey.split('/').pop() ?? dbPhoto.fullKey,
+        createdAt: dbPhoto.createdAt,
+        cameraModel: dbPhoto.cameraModel,
+      };
+    });
   
   // Find the index of the selected photo
   const selectedPhotoIndex = photoId ? photos.findIndex(photo => photo.id === photoId) : null;
@@ -457,7 +463,7 @@ function PhotosContent() {
                     →
                   </button>
                 </div>
-                <div className="max-w-[90vw] max-h-[85vh] relative">
+                <div className="max-w-[85vw] max-h-[98vh] relative">
                   {(() => {
                     const selectedPhoto = photos[selectedPhotoIndex];
                     if (!selectedPhoto) return null;
@@ -473,7 +479,7 @@ function PhotosContent() {
                           <Image
                             src={selectedPhoto.gallerySrc}
                             alt={selectedPhoto.name}
-                            className={`max-w-[90vw] max-h-[85vh] w-auto h-auto ${
+                            className={`max-w-[85vw] max-h-[95vh] w-auto h-auto ${
                               loadedGalleryImages.has(selectedPhoto.id) ? 'opacity-100' : 'opacity-0'
                             }`}
                             width={1920}
@@ -482,22 +488,25 @@ function PhotosContent() {
                             onLoad={() => setLoadedGalleryImages(prev => new Set([...prev, selectedPhoto.id]))}
                           />
                         </div>
+                        <div className="absolute bottom-0 left-0 right-0 bg-black/50 backdrop-blur-sm text-white p-2 text-center text-[.9rem]">
+                          {(() => {
+                            const photo = photos[selectedPhotoIndex];
+                            if (!photo) return null;
+                            
+                            const date = new Date(photo.createdAt);
+                            const monthYear = date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+                            
+                            return (
+                              <span>
+                                {monthYear} {photo.cameraModel && `• ${photo.cameraModel}`}
+                              </span>
+                            );
+                          })()}
+                        </div>
                       </>
                     );
                   })()}
                 </div>
-                {/* <div className="absolute bottom-0 left-0 right-0 bg-white/90 backdrop-blur-sm p-4 text-[1.4rem] text-dark">
-                  <div className="flex justify-between items-center">
-                    <div>
-                      <span className="font-medium">{photos[selectedPhotoIndex].location}</span>
-                      <span className="mx-2">•</span>
-                      <span>{photos[selectedPhotoIndex].date}</span>
-                    </div>
-                    <div>
-                      <span className="text-light">{photos[selectedPhotoIndex].camera_name}</span>
-                    </div>
-                  </div>
-                </div> */}
               </div>
             )}
           </DialogPanel>

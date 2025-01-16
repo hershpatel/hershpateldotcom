@@ -182,6 +182,7 @@ export const photosRouter = createTRPCRouter({
       thumbnailUrl: z.string().nullable(),
       galleryUrl: z.string().nullable(),
       fullUrl: z.string(),
+      cameraModel: z.string().nullable(),
       tags: z.array(z.object({
         pk: z.string(),
         name: z.string(),
@@ -223,6 +224,7 @@ export const photosRouter = createTRPCRouter({
             gallery_key: true,
             status: true,
             original_created_at: true,
+            camera_model: true,
           },
           orderBy: input.random 
             ? (images, { sql }) => sql`random()` 
@@ -252,7 +254,7 @@ export const photosRouter = createTRPCRouter({
         }
 
         // Map photos with their tags
-        return photos.map(photo => ({
+        const mappedPhotos = photos.map(photo => ({
           pk: photo.pk,
           fullKey: photo.full_key,
           thumbnailKey: photo.thumbnail_key,
@@ -262,8 +264,10 @@ export const photosRouter = createTRPCRouter({
           thumbnailUrl: photo.thumbnail_key ? `${env.CLOUDFRONT_URL}/${photo.thumbnail_key}` : null,
           galleryUrl: photo.gallery_key ? `${env.CLOUDFRONT_URL}/${photo.gallery_key}` : null,
           fullUrl: `${env.CLOUDFRONT_URL}/${photo.full_key}`,
+          cameraModel: photo.camera_model,
           ...(input.includeTags && { tags: tagsByPhotoPk.get(photo.pk) ?? [] }),
         }));
+        return mappedPhotos;
       } catch (error) {
         console.error('Error listing photos with URLs:', error);
         throw new Error('Failed to list photos from database');
@@ -451,6 +455,7 @@ export const photosRouter = createTRPCRouter({
       thumbnailUrl: z.string().nullable(),
       galleryUrl: z.string().nullable(),
       fullUrl: z.string(),
+      cameraModel: z.string().nullable(),
       tags: z.array(z.object({
         pk: z.string(),
         name: z.string(),
@@ -468,6 +473,7 @@ export const photosRouter = createTRPCRouter({
             gallery_key: true,
             status: true,
             original_created_at: true,
+            camera_model: true,
           },
           orderBy: input.random 
             ? (images, { sql }) => sql`random()` 
@@ -504,6 +510,7 @@ export const photosRouter = createTRPCRouter({
           thumbnailUrl: photo.thumbnail_key ? `${env.CLOUDFRONT_URL}/${photo.thumbnail_key}` : null,
           galleryUrl: photo.gallery_key ? `${env.CLOUDFRONT_URL}/${photo.gallery_key}` : null,
           fullUrl: `${env.CLOUDFRONT_URL}/${photo.full_key}`,
+          cameraModel: photo.camera_model,
           tags: tagsByPhotoPk.get(photo.pk) ?? [],
         }));
       } catch (error) {
