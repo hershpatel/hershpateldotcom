@@ -1,8 +1,10 @@
 import { Playfair_Display } from "next/font/google";
 import "~/styles/globals.css";
 import { type Metadata } from "next";
+import { Suspense } from "react";
 
 import { TRPCReactProvider } from "~/trpc/react";
+import { PHProvider, PostHogPageview } from "~/components/providers/posthog";
 
 const font = Playfair_Display({
   subsets: ["latin"],
@@ -25,9 +27,14 @@ export default function RootLayout({
 }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en">
-      <body className={font.className}>
-        <TRPCReactProvider>{children}</TRPCReactProvider>
-      </body>
+      <Suspense>
+        <PostHogPageview />
+      </Suspense>
+      <PHProvider>
+        <body className={font.className}>
+          <TRPCReactProvider>{children}</TRPCReactProvider>
+        </body>
+      </PHProvider>
     </html>
   );
 }
