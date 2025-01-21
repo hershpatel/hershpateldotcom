@@ -9,7 +9,7 @@ import { env } from "./src/env.js";
 const config = {
   images: {
     domains: [new URL(env.CLOUDFRONT_URL).hostname],
-    minimumCacheTTL: 60 * 60 * 24 * 3, // 3 days in seconds
+    minimumCacheTTL: 60 * 60 * 24 * 30, // 30 days in seconds
   },
 };
 
