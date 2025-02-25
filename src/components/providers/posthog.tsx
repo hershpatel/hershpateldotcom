@@ -5,7 +5,7 @@ import { PostHogProvider } from 'posthog-js/react';
 import { usePathname, useSearchParams } from 'next/navigation';
 import { useEffect } from 'react';
 
-if (typeof window !== 'undefined') {
+if (typeof window !== 'undefined' && window.location.hostname !== 'localhost') {
   posthog.init(process.env.NEXT_PUBLIC_POSTHOG_KEY!, {
     api_host: process.env.NEXT_PUBLIC_POSTHOG_HOST ?? 'https://app.posthog.com',
     loaded: (posthog) => {
@@ -19,7 +19,7 @@ export function PostHogPageview() {
   const searchParams = useSearchParams();
 
   useEffect(() => {
-    if (pathname) {
+    if (pathname && window.location.hostname !== 'localhost') {
       let url = window.origin + pathname;
       if (searchParams.toString()) {
         url = url + `?${searchParams.toString()}`;
